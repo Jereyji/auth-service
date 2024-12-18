@@ -15,4 +15,4 @@ class RefreshToken:
         return secrets.token_urlsafe(64)
 
     def _generate_expired_at(self) -> datetime:
-        return datetime.now() + timedelta(days=ADDING_TIME)
+        return datetime.now().replace(microsecond=0) + timedelta(days=ADDING_TIME)
