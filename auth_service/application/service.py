@@ -23,12 +23,15 @@ class AuthService:
         if not user.check_password(password):
             raise Exception("Invalid credentials")
 
-        access_token = jwt.encode({"sub": user.username}, self._secret_key, algorithm=ALGORITHM)
+        access_token = jwt.encode({"username": user.username}, self._secret_key, algorithm=ALGORITHM)
         refresh_token = RefreshToken(user.id)
 
         self._refresh_token_repository.create_refresh_token(refresh_token)
 
-        return TokensResponse(access_token, refresh_token.refresh_token)
+        return TokensResponse(
+            access_token=access_token,
+            refresh_token=refresh_token.refresh_token
+        )
 
     def register_user(self, username: str, password: str) -> None:
         hashed_password = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
@@ -44,10 +47,10 @@ class AuthService:
         if not user:
             raise Exception("User not found")
 
-        new_access_token = jwt.encode({"sub": user.username}, self._secret_key, algorithm=ALGORITHM)
-        new_refresh_token_str = RefreshToken(user.id).refresh_token
-        new_expired_at = datetime.now() + timedelta(days=14)
+        new_access_token = jwt.encode({"username": user.username}, self._secret_key, algorithm=ALGORITHM)
+        refresh_token.refresh_token = refresh_token.new_refresh_token()
+        refresh_token.expired_at = refresh_token.generate_expired_at()
 
-        self._refresh_token_repository.update_refresh_token(refresh_token_str, new_refresh_token_str, new_expired_at)
+        self._refresh_token_repository.update_refresh_token(refresh_token_str, refresh_token)
 
-        return TokensResponse(new_access_token, new_refresh_token_str)
+        return TokensResponse(new_access_token, refresh_token.refresh_token)
