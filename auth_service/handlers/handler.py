@@ -1,17 +1,11 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Response, Depends, Request
+from fastapi.responses import JSONResponse
 from application.service import AuthService
-from application.DTO import UserLoginRequest, TokenResponse
+from application.DTO import UserLoginRequest, TokensResponse
+
 
 def create_auth_router(auth_service: AuthService):
     router = APIRouter()
-
-    @router.post("/login", response_model=TokenResponse)
-    def login(request: UserLoginRequest):
-        try:
-            token = auth_service.authenticate_user(request.username, request.password)
-            return {"access_token": token, "token_type": "bearer"}
-        except Exception as e:
-            raise HTTPException(status_code=401, detail=str(e))
 
     @router.post("/register")
     def register(request: UserLoginRequest):
@@ -20,5 +14,51 @@ def create_auth_router(auth_service: AuthService):
             return {"detail": "User registered successfully"}
         except Exception as e:
             raise HTTPException(status_code=400, detail=str(e))
+
+    @router.post("/login", response_model=TokensResponse)
+    def login(request: UserLoginRequest):
+        try:
+            tokens = auth_service.authenticate_user(request.username, request.password)
+
+            response.set_cookie(
+                key="refresh_token",
+                value=tokens.refresh_token,
+                httponly=True,
+                secure=True,
+                samesite="Strict",
+                max_age=14 * 24 * 60 * 60  # Срок действия cookie (14 дней)
+            )
+
+            return JSONResponse(
+                {"access_token": tokens.access_token, "token_type": "bearer"}
+            )
+        except Exception as e:
+            raise HTTPException(status_code=401, detail=str(e))
+
+    def get_refresh_token_from_cookie(request: Request) -> str:
+        refresh_token = request.cookies.get("refresh_token")
+        if not refresh_token:
+            raise HTTPException(status_code=401, detail="Refresh token is missing")
+        return refresh_token
+    
+    @router.post("/refresh", response_model=TokensResponse)
+    def refresh(response: Response, refresh_token: str = Depends(get_refresh_token_from_cookie)):
+        try:
+            tokens = auth_service.refresh_tokens(refresh_token)
+
+            response.set_cookie(
+                key="refresh_token",
+                value=tokens.refresh_token,
+                httponly=True,
+                secure=True,
+                samesite="Strict",
+                max_age=14 * 24 * 60 * 60
+            )
+
+            return JSONResponse(
+                {"access_token": tokens.access_token, "token_type": "bearer"}
+            )
+        except Exception as e:
+            raise HTTPException(status_code=401, detail=str(e))
 
     return router
