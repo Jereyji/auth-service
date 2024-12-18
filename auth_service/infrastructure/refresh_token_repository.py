@@ -7,13 +7,17 @@ class RefreshTokenRepository:
         self.conn = db_connection
 
     def create_refresh_token(self, token: RefreshToken) -> None:
-        with self.conn.cursor() as cursor:
-            query = sql.SQL("""
-                INSERT INTO refresh_tokens (id, user_id, refresh_token, expired_at)
-                VALUES (%s, %s, %s, %s)
-            """)
-            cursor.execute(query, (token.id, token.user_id, token.refresh_token, token.expired_at))
-            self.conn.commit()
+        try:
+            with self.conn.cursor() as cursor:
+                query = sql.SQL("""
+                    INSERT INTO refresh_tokens (id, user_id, refresh_token, expired_at)
+                    VALUES (%s, %s, %s, %s)
+                """)
+                cursor.execute(query, (token.id, token.user_id, token.refresh_token, token.expired_at))
+                self.conn.commit()
+        except Exception as e:
+            self.conn.rollback()
+            raise
 
     def get_refresh_token(self, refresh_token: str) -> RefreshToken | None:
         with self.conn.cursor() as cursor:
