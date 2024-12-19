@@ -1,8 +1,8 @@
 import psycopg2
 from psycopg2.extras import RealDictCursor
-from pkg.secret_manager import SecretManager
+from pkg.env_manager import PostgresConfig
 
-def get_db_connection(secrets: SecretManager):
+def get_db_connection(secrets: PostgresConfig):
     DATABASE_URL = (
         f"postgresql://{secrets.postgres_user}:"
         f"{secrets.postgres_password}@"

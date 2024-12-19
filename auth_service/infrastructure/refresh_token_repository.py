@@ -13,7 +13,7 @@ class RefreshTokenRepository:
                     INSERT INTO refresh_tokens (id, user_id, refresh_token, expired_at)
                     VALUES (%s, %s, %s, %s)
                 """)
-                cursor.execute(query, (token.id, token.user_id, token.refresh_token, token.expired_at))
+                cursor.execute(query, (token.id, token.user_id, token.refresh_token_str, token.expired_at))
                 self.conn.commit()
         except Exception as e:
             self.conn.rollback()

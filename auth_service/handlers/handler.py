@@ -31,7 +31,7 @@ def create_auth_router(auth_service: AuthService):
                 httponly=True,
                 secure=True,
                 samesite="Strict",
-                max_age=14 * 24 * 60 * 60  # Срок действия cookie (14 дней) // Исправить!!!
+                expires=tokens.refresh_token_expiration  # Исправить!!!
             )
 
             return response
@@ -60,7 +60,7 @@ def create_auth_router(auth_service: AuthService):
                 httponly=True,
                 secure=True,
                 samesite="Strict",
-                max_age=14 * 24 * 60 * 60
+                expires=tokens.expired_at
             )
 
             return response

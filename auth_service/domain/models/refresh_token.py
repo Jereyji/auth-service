@@ -2,17 +2,18 @@ import uuid
 import secrets
 from datetime import datetime, timedelta
 
-ADDING_TIME=14
-
 class RefreshToken:
-    def __init__(self, user_id: str):
+    def __init__(self, user_id: str, adding_time: int):
         self.id = str(uuid.uuid4())
         self.user_id = user_id
-        self.refresh_token = self._generate_refresh_token()
-        self.expired_at = self._generate_expired_at()
+        self.refresh_token_str: str
+        self.expired_at: datetime
 
-    def _generate_refresh_token(self) -> str:
-        return secrets.token_urlsafe(64)
+        self.generate_refresh_token()
+        self.generate_expired_at(adding_time)
 
-    def _generate_expired_at(self) -> datetime:
-        return datetime.now().replace(microsecond=0) + timedelta(days=ADDING_TIME)
+    def generate_refresh_token(self):
+        self.refresh_token_str = secrets.token_urlsafe(64)
+
+    def generate_expired_at(self, adding_time: int):
+        self.expired_at = datetime.now().replace(microsecond=0) + timedelta(days=adding_time)

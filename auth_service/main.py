@@ -4,17 +4,17 @@ from infrastructure.database import get_db_connection
 from application.service import AuthService
 from infrastructure.user_repository import UserRepository
 from infrastructure.refresh_token_repository import RefreshTokenRepository
-from pkg.secret_manager import SecretManager
+from pkg.env_manager import Configs
 
-secrets = SecretManager()
+configs = Configs()
 
 app = FastAPI()
 
 def init_auth_service():
-    connection = get_db_connection(secrets)
+    connection = get_db_connection(configs.postgres_config)
     user_repository = UserRepository(connection)
     refresh_token_repository = RefreshTokenRepository(connection)
-    return AuthService(user_repository, refresh_token_repository, secrets.secret_key)
+    return AuthService(user_repository, refresh_token_repository, configs.secret_config)
 
 auth_service = init_auth_service()
 
