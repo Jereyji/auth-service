@@ -1,0 +1,53 @@
+version: '3.8'
+services:
+  auth-service:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file: ".env"
+    networks:
+      - service-network
+    command:
+      - ./main
+
+  postgres:
+    container_name: auth_db
+    image: postgres:13
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/repository/data
+    env_file: ".env"
+    networks:
+      - service-network
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}" ]
+      interval: 3s
+      retries: 5
+      start_period: 15s
+      timeout: 30s
+
+  migrate:
+    container_name: auth_db_migrate
+    image: migrate/migrate:4
+    command: -path=../migrations/ -database "postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}?sslmode=${POSTGRES_SSLMODE}" up
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ../migrations:/migrations:ro
+    env_file: ".env"
+    networks:
+      - service-network
+
+volumes:
+  postgres_data:
+
+networks:
+  service-network:
+    driver: bridge
