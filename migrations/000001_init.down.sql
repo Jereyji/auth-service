@@ -1,7 +1,3 @@
 DROP TABLE IF EXISTS users;
 
 DROP TABLE IF EXISTS refresh_tokens;
-
-DROP TABLE IF EXISTS house;
-
-DROP TABLE IF EXISTS flat;
