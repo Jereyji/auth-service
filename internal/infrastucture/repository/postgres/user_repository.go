@@ -11,9 +11,12 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-func (r *EstateRepository) GetUserByUsername(ctx context.Context, username string) (*entity.User, error) {
+func (r *AuthRepository) GetUserByUsername(ctx context.Context, username string) (*entity.User, error) {
+	db := r.txm.TxOrDB(ctx)
+
 	var user entity.User
-	err := r.db.QueryRow(ctx, queries.GetUserByUsernameQuery, username).Scan(
+
+	err := db.QueryRow(ctx, queries.GetUserByUsernameQuery, username).Scan(
 		&user.ID,
 		&user.Username,
 		&user.HashedPassword,
@@ -30,9 +33,12 @@ func (r *EstateRepository) GetUserByUsername(ctx context.Context, username strin
 	return &user, nil
 }
 
-func (r *EstateRepository) GetUser(ctx context.Context, userID uuid.UUID) (*entity.User, error) {
+func (r *AuthRepository) GetUser(ctx context.Context, userID uuid.UUID) (*entity.User, error) {
+	db := r.txm.TxOrDB(ctx)
+
 	var user entity.User
-	err := r.db.QueryRow(ctx, queries.GetUserByIDQuery, userID).Scan(
+
+	err := db.QueryRow(ctx, queries.GetUserByIDQuery, userID).Scan(
 		&user.ID,
 		&user.Username,
 		&user.HashedPassword,
@@ -49,16 +55,17 @@ func (r *EstateRepository) GetUser(ctx context.Context, userID uuid.UUID) (*enti
 	return &user, nil
 }
 
-func (r *EstateRepository) CreateUser(ctx context.Context, user *entity.User) error {
-	var userID uuid.UUID
-	err := r.db.QueryRow(ctx, queries.CreateUserQuery,
+func (r *AuthRepository) CreateUser(ctx context.Context, user *entity.User) error {
+	db := r.txm.TxOrDB(ctx)
+
+	_, err := db.Exec(ctx, queries.CreateUserQuery,
 		user.ID,
 		user.Username,
 		user.HashedPassword,
 		user.AccessLevel,
-	).Scan(&userID)
+	)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
+		if ifUniqueViolation(err) {
 			return repos.ErrRowExist
 		}
 
@@ -68,8 +75,10 @@ func (r *EstateRepository) CreateUser(ctx context.Context, user *entity.User) er
 	return nil
 }
 
-func (r *EstateRepository) UpdateUser(ctx context.Context, user *entity.User) error {
-	_, err := r.db.Exec(ctx, queries.UpdateUserQuery,
+func (r *AuthRepository) UpdateUser(ctx context.Context, user *entity.User) error {
+	db := r.txm.TxOrDB(ctx)
+
+	_, err := db.Exec(ctx, queries.UpdateUserQuery,
 		user.ID,
 		user.Username,
 		user.HashedPassword,
@@ -82,8 +91,10 @@ func (r *EstateRepository) UpdateUser(ctx context.Context, user *entity.User) er
 	return nil
 }
 
-func (r *EstateRepository) DeleteUser(ctx context.Context, userID uuid.UUID) error {
-	_, err := r.db.Exec(ctx, queries.DeleteUserQuery, userID)
+func (r *AuthRepository) DeleteUser(ctx context.Context, userID uuid.UUID) error {
+	db := r.txm.TxOrDB(ctx)
+
+	_, err := db.Exec(ctx, queries.DeleteUserQuery, userID)
 	if err != nil {
 		return err
 	}

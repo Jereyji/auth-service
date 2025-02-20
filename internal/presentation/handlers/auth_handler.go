@@ -24,12 +24,12 @@ func (h Handler) Register(c *gin.Context) {
 			return
 		}
 
-		slog.Error("registration user: ", slog.String("error", err.Error()))
+		h.slog.Error("registration user: ", slog.String("error", err.Error()))
 		c.Status(http.StatusInternalServerError)
 		return
 	}
 
-	c.JSON(http.StatusCreated, RegisterResponse{
+	c.JSON(http.StatusOK, RegisterResponse{
 		Username: user.Username,
 	})
 }
@@ -53,7 +53,7 @@ func (h Handler) Login(c *gin.Context) {
 			c.String(http.StatusUnauthorized, entity.ErrInvalidUsernameOrPassword.Error())
 		}
 
-		slog.Error("login user: ", slog.String("error", err.Error()))
+		h.slog.Error("login user: ", slog.String("error", err.Error()))
 		c.Status(http.StatusInternalServerError)
 		return
 	}
@@ -83,7 +83,7 @@ func (h Handler) DummyLogin(c *gin.Context) {
 			return
 		}
 
-		slog.Error("dummy login user: ", slog.String("error", err.Error()))
+		h.slog.Error("dummy login user: ", slog.String("error", err.Error()))
 		c.Status(http.StatusInternalServerError)
 		return
 	}
@@ -107,7 +107,7 @@ func (h Handler) RefreshTokens(c *gin.Context) {
 		// 	return
 		// }
 
-		slog.Error("refreshing tokens: ", slog.String("error", err.Error()))
+		h.slog.Error("refreshing tokens: ", slog.String("error", err.Error()))
 		c.Status(http.StatusInternalServerError)
 		return
 	}
@@ -125,7 +125,7 @@ func (h Handler) Logout(c *gin.Context) {
 	}
 
 	if err := h.service.Logout(c.Request.Context(), refreshTokenCookie); err != nil {
-		slog.Error("logouting user: ", slog.String("error", err.Error()))
+		h.slog.Error("logouting user: ", slog.String("error", err.Error()))
 		c.Status(http.StatusInternalServerError)
 		return
 	}

@@ -1,29 +1,28 @@
 package repository
 
 import (
-	"github.com/jackc/pgx/v5/pgxpool"
-	"golang.org/x/net/context"
+	"errors"
+
+	trm "github.com/Jereyji/auth-service.git/pkg/transaction_manager"
+	"github.com/jackc/pgerrcode"
+	"github.com/jackc/pgx/v5/pgconn"
 )
 
-type EstateRepository struct {
-	db *pgxpool.Pool
+type AuthRepository struct {
+	txm trm.TransactionManager
 }
 
-func NewPostgresDB(ctx context.Context, connString string) (*pgxpool.Pool, error) {
-	pool, err := pgxpool.New(ctx, connString)
-	if err != nil {
-		return nil, err
+func NewAuthRepository(txm trm.TransactionManager) *AuthRepository {
+	return &AuthRepository{
+		txm: txm,
 	}
-
-	if err := pool.Ping(ctx); err != nil {
-		return nil, err
-	}
-
-	return pool, nil
 }
 
-func NewEstateRepository(db *pgxpool.Pool) *EstateRepository {
-	return &EstateRepository{
-		db: db,
+func ifUniqueViolation(err error) bool {
+	var pgErr *pgconn.PgError
+	if errors.As(err, &pgErr) && pgErr.Code == pgerrcode.UniqueViolation {
+		return true
 	}
+
+	return false
 }

@@ -10,9 +10,12 @@ import (
 	"golang.org/x/net/context"
 )
 
-func (r *EstateRepository) GetRefreshToken(ctx context.Context, token string) (*entity.RefreshSessions, error) {
+func (r *AuthRepository) GetRefreshToken(ctx context.Context, token string) (*entity.RefreshSessions, error) {
+	db := r.txm.TxOrDB(ctx)
+
 	var refreshToken entity.RefreshSessions
-	err := r.db.QueryRow(ctx, queries.GetRefreshTokenQuery, token).Scan(
+
+	err := db.QueryRow(ctx, queries.GetRefreshTokenQuery, token).Scan(
 		&refreshToken.RefreshToken,
 		&refreshToken.UserID,
 		&refreshToken.CreatedAt,
@@ -29,16 +32,17 @@ func (r *EstateRepository) GetRefreshToken(ctx context.Context, token string) (*
 	return &refreshToken, nil
 }
 
-func (r *EstateRepository) CreateRefreshToken(ctx context.Context, token *entity.RefreshSessions) error {
-	var refreshToken string
-	err := r.db.QueryRow(ctx, queries.CreateRefreshTokenQuery,
+func (r *AuthRepository) CreateRefreshToken(ctx context.Context, token *entity.RefreshSessions) error {
+	db := r.txm.TxOrDB(ctx)
+
+	_, err := db.Exec(ctx, queries.CreateRefreshTokenQuery,
 		token.RefreshToken,
 		token.UserID,
 		token.CreatedAt,
 		token.ExpiresIn,
-	).Scan(&refreshToken)
+	)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
+		if ifUniqueViolation(err) {
 			return repos.ErrRowExist
 		}
 
@@ -48,8 +52,10 @@ func (r *EstateRepository) CreateRefreshToken(ctx context.Context, token *entity
 	return nil
 }
 
-func (r *EstateRepository) UpdateRefreshToken(ctx context.Context, oldToken string, token *entity.RefreshSessions) error {
-	_, err := r.db.Exec(ctx, queries.UpdateRefreshTokenQuery,
+func (r *AuthRepository) UpdateRefreshToken(ctx context.Context, oldToken string, token *entity.RefreshSessions) error {
+	db := r.txm.TxOrDB(ctx)
+
+	_, err := db.Exec(ctx, queries.UpdateRefreshTokenQuery,
 		oldToken,
 		token.RefreshToken,
 		token.UserID,
@@ -62,8 +68,10 @@ func (r *EstateRepository) UpdateRefreshToken(ctx context.Context, oldToken stri
 	return nil
 }
 
-func (r *EstateRepository) DeleteRefreshToken(ctx context.Context, token string) error {
-	_, err := r.db.Exec(ctx, queries.DeleteRefreshTokenQuery, token)
+func (r *AuthRepository) DeleteRefreshToken(ctx context.Context, token string) error {
+	db := r.txm.TxOrDB(ctx)
+
+	_, err := db.Exec(ctx, queries.DeleteRefreshTokenQuery, token)
 	if err != nil {
 		return err
 	}

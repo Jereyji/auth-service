@@ -9,9 +9,11 @@ import (
 	"syscall"
 
 	"github.com/Jereyji/auth-service.git/internal/application/services"
-	"github.com/Jereyji/auth-service.git/internal/infrastucture/repository/postgres"
+	"github.com/Jereyji/auth-service.git/internal/infrastucture/database/postgres"
+	repository "github.com/Jereyji/auth-service.git/internal/infrastucture/repository/postgres"
 	"github.com/Jereyji/auth-service.git/internal/pkg/configs"
 	"github.com/Jereyji/auth-service.git/internal/presentation/handlers"
+	trm "github.com/Jereyji/auth-service.git/pkg/transaction_manager"
 )
 
 func main() {
@@ -26,16 +28,18 @@ func main() {
 		log.Fatal("Error reading environment variables: ", err)
 	}
 
-	postgresDB, err := repository.NewPostgresDB(ctx, config.DatabaseURL)
+	postgresDB, err := postgres.NewPostgresDB(ctx, config.DatabaseURL)
 	if err != nil {
 		log.Fatal("Error initialization postgres database: ", err)
 	}
 	defer postgresDB.Close()
 
+	trm := trm.NewTransactionManager(postgresDB)
+
 	var (
-		repos   = repository.NewEstateRepository(postgresDB)
-		service = services.NewService(repos, &config.AuthService)
-		handler = handlers.NewHandler(service, &config.AuthService)
+		repos   = repository.NewAuthRepository(trm)
+		service = services.NewAuthService(repos, trm, &config.AuthService)
+		handler = handlers.NewHandler(service, &config.AuthService, logger)
 	)
 
 	r := handler.InitRoutes()

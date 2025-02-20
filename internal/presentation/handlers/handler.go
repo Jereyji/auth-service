@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"errors"
+	"log/slog"
 	"net/http"
 
 	"github.com/Jereyji/auth-service.git/internal/application/services"
@@ -10,13 +11,14 @@ import (
 )
 
 type Handler struct {
-	service            *services.Service
+	service            *services.AuthService
 	config             *configs.AuthConfig
 	accessTokenCookie  http.Cookie
 	refreshTokenCookie http.Cookie
+	slog               *slog.Logger
 }
 
-func NewHandler(serv *services.Service, config *configs.AuthConfig) *Handler {
+func NewHandler(serv *services.AuthService, config *configs.AuthConfig, slog *slog.Logger) *Handler {
 	return &Handler{
 		service: serv,
 		config:  config,
@@ -36,6 +38,7 @@ func NewHandler(serv *services.Service, config *configs.AuthConfig) *Handler {
 			Secure:   false,
 			HttpOnly: true,
 		},
+		slog: slog,
 	}
 }
 

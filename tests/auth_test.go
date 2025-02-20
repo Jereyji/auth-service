@@ -13,6 +13,7 @@ import (
 
 const (
 	Addr             = "http://localhost:8080"
+	contentTypeJSON  = "application/json"
 	registrationAddr = Addr + "/auth/register"
 	loginAddr        = Addr + "/auth/login"
 )
@@ -59,7 +60,7 @@ func TestSuccessRegistration(t *testing.T) {
 			}
 			`, tc.RegisterRequest.Username, tc.RegisterRequest.Password, tc.RegisterRequest.AccessLevel))
 
-			resp, err := http.Post(registrationAddr, "application/json", request)
+			resp, err := http.Post(registrationAddr, contentTypeJSON, request)
 			require.NoError(t, err)
 			defer resp.Body.Close()
 
@@ -116,7 +117,7 @@ func TestFailRegistration(t *testing.T) {
 			}
 			`, tc.RegisterRequest1.Username, tc.RegisterRequest1.Password, tc.RegisterRequest1.AccessLevel))
 
-			resp1, err := http.Post(registrationAddr, "application/json", request1)
+			resp1, err := http.Post(registrationAddr, contentTypeJSON, request1)
 			require.NoError(t, err)
 			defer resp1.Body.Close()
 
@@ -130,7 +131,7 @@ func TestFailRegistration(t *testing.T) {
 			}
 			`, tc.RegisterRequest2.Username, tc.RegisterRequest2.Password, tc.RegisterRequest2.AccessLevel))
 
-			resp2, err := http.Post(registrationAddr, "application/json", request2)
+			resp2, err := http.Post(registrationAddr, contentTypeJSON, request2)
 			require.NoError(t, err)
 			defer resp2.Body.Close()
 
@@ -162,7 +163,7 @@ func TestSuccessLogin(t *testing.T) {
 			}
 			`, tc.LoginRequest.Username, tc.LoginRequest.Password))
 
-			resp, err := http.Post(loginAddr, "application/json", request)
+			resp, err := http.Post(loginAddr, contentTypeJSON, request)
 			require.NoError(t, err)
 
 			assert.Equal(t, tc.ExpectedStatus, resp.StatusCode)

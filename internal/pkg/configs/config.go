@@ -23,9 +23,9 @@ type AuthConfig struct {
 }
 
 type Config struct {
-	AuthService AuthConfig
-	Database    DatabaseConfig
+	database    DatabaseConfig
 	DatabaseURL string `env:"-"`
+	AuthService AuthConfig
 }
 
 func NewConfig() (*Config, error) {
@@ -38,12 +38,12 @@ func NewConfig() (*Config, error) {
 
 	cfg.DatabaseURL = fmt.Sprintf(
 		"postgres://%s:%s@%s:%s/%s?sslmode=%s",
-		cfg.Database.User,
-		cfg.Database.Password,
-		cfg.Database.Host,
-		cfg.Database.Port,
-		cfg.Database.Name,
-		cfg.Database.SSLMode,
+		cfg.database.User,
+		cfg.database.Password,
+		cfg.database.Host,
+		cfg.database.Port,
+		cfg.database.Name,
+		cfg.database.SSLMode,
 	)
 
 	return &cfg, nil
