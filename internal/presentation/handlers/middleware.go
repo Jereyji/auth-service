@@ -7,11 +7,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-const (
-	clientLevel    = 1
-	moderatorLevel = 2
-)
-
 func (h Handler) AuthModeratorMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		accessToken, err := c.Cookie(h.accessTokenCookie.Name)
@@ -28,12 +23,8 @@ func (h Handler) AuthModeratorMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		if err := claims.CheckAccessLevel(moderatorLevel); err != nil {
-			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{
-				"error": err.Error(),
-			})
-			return
-		}
+		userID := claims.TokenPayload.UserID
+		c.Set("userID", userID)
 
 		c.Next()
 	}

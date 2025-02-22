@@ -9,12 +9,12 @@ import (
 
 type User struct {
 	ID             uuid.UUID
-	Username       string
+	Name           string
+	Email          string
 	HashedPassword string
-	AccessLevel    int
 }
 
-func NewUser(username, password string, accessLevel int) (*User, error) {
+func NewUser(name, email, password string) (*User, error) {
 	hashedPassword, err := hashPassword(password)
 	if err != nil {
 		return nil, err
@@ -22,9 +22,9 @@ func NewUser(username, password string, accessLevel int) (*User, error) {
 
 	return &User{
 		ID:             uuid.New(),
-		Username:       username,
+		Name:           name,
+		Email:          email,
 		HashedPassword: hashedPassword,
-		AccessLevel:    accessLevel,
 	}, nil
 }
 

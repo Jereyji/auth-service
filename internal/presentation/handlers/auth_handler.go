@@ -18,9 +18,9 @@ func (h Handler) Register(c *gin.Context) {
 		return
 	}
 
-	if err := h.service.Register(c.Request.Context(), user.Username, user.Password, user.AccessLevel); err != nil {
+	if err := h.service.Register(c.Request.Context(), user.Name, user.Email, user.Password); err != nil {
 		if errors.Is(err, repos.ErrRowExist) {
-			c.String(http.StatusConflict, "%s: %s", err.Error(), user.Username)
+			c.String(http.StatusConflict, "%s: %s", err.Error(), user.Email)
 			return
 		}
 
@@ -30,7 +30,7 @@ func (h Handler) Register(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, RegisterResponse{
-		Username: user.Username,
+		Email: user.Email,
 	})
 }
 
@@ -42,15 +42,16 @@ func (h Handler) Login(c *gin.Context) {
 		return
 	}
 
-	accessToken, refreshToken, err := h.service.Login(c.Request.Context(), user.Username, user.Password)
+	accessToken, refreshToken, err := h.service.Login(c.Request.Context(), user.Email, user.Password)
 	if err != nil {
 		if errors.Is(err, repos.ErrNotFound) {
-			c.String(http.StatusNotFound, "%s : %s", err.Error(), user.Username)
+			c.String(http.StatusNotFound, "%s : %s", err.Error(), user.Email)
 			return
 		}
 
 		if errors.Is(err, entity.ErrInvalidUsernameOrPassword) {
 			c.String(http.StatusUnauthorized, entity.ErrInvalidUsernameOrPassword.Error())
+			return
 		}
 
 		h.slog.Error("login user: ", slog.String("error", err.Error()))
@@ -71,15 +72,15 @@ func (h Handler) DummyLogin(c *gin.Context) {
 		return
 	}
 
-	accessToken, refreshToken, err := h.service.DummyLogin(c.Request.Context(), user.Username, user.Password, user.AccessLevel)
+	accessToken, refreshToken, err := h.service.DummyLogin(c.Request.Context(), user.Email, user.Name, user.Password)
 	if err != nil {
 		if errors.Is(err, repos.ErrRowExist) {
-			c.String(http.StatusConflict, "%s: %s", err.Error(), user.Username)
+			c.String(http.StatusConflict, "%s: %s", err.Error(), user.Email)
 			return
 		}
 
 		if errors.Is(err, repos.ErrNotFound) {
-			c.String(http.StatusNotFound, "%s : %s", err.Error(), user.Username)
+			c.String(http.StatusNotFound, "%s : %s", err.Error(), user.Email)
 			return
 		}
 
@@ -131,26 +132,4 @@ func (h Handler) Logout(c *gin.Context) {
 	}
 
 	c.Status(http.StatusOK)
-}
-
-func (h Handler) sendTokensInCookie(c *gin.Context, accessToken, refreshToken string) {
-	c.SetCookie(
-		h.accessTokenCookie.Name,
-		accessToken,
-		h.accessTokenCookie.MaxAge,
-		h.accessTokenCookie.Path,
-		h.accessTokenCookie.Domain,
-		h.accessTokenCookie.Secure,
-		h.accessTokenCookie.HttpOnly,
-	)
-
-	c.SetCookie(
-		h.refreshTokenCookie.Name,
-		refreshToken,
-		h.refreshTokenCookie.MaxAge,
-		h.refreshTokenCookie.Path,
-		h.refreshTokenCookie.Domain,
-		h.refreshTokenCookie.Secure,
-		h.refreshTokenCookie.HttpOnly,
-	)
 }

@@ -10,6 +10,10 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+var (
+	ErrInvalidInput = errors.New("invalid input").Error()
+)
+
 type Handler struct {
 	service            *services.AuthService
 	config             *configs.AuthConfig
@@ -56,6 +60,24 @@ func (h Handler) InitRoutes() *gin.Engine {
 	return router
 }
 
-var (
-	ErrInvalidInput = errors.New("invalid input").Error()
-)
+func (h Handler) sendTokensInCookie(c *gin.Context, accessToken, refreshToken string) {
+	c.SetCookie(
+		h.accessTokenCookie.Name,
+		accessToken,
+		h.accessTokenCookie.MaxAge,
+		h.accessTokenCookie.Path,
+		h.accessTokenCookie.Domain,
+		h.accessTokenCookie.Secure,
+		h.accessTokenCookie.HttpOnly,
+	)
+
+	c.SetCookie(
+		h.refreshTokenCookie.Name,
+		refreshToken,
+		h.refreshTokenCookie.MaxAge,
+		h.refreshTokenCookie.Path,
+		h.refreshTokenCookie.Domain,
+		h.refreshTokenCookie.Secure,
+		h.refreshTokenCookie.HttpOnly,
+	)
+}

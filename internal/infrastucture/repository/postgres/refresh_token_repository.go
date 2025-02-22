@@ -15,7 +15,7 @@ func (r *AuthRepository) GetRefreshToken(ctx context.Context, token string) (*en
 
 	var refreshToken entity.RefreshSessions
 
-	err := db.QueryRow(ctx, queries.GetRefreshTokenQuery, token).Scan(
+	err := db.QueryRow(ctx, queries.QueryGetRefreshToken, token).Scan(
 		&refreshToken.RefreshToken,
 		&refreshToken.UserID,
 		&refreshToken.CreatedAt,
@@ -35,7 +35,7 @@ func (r *AuthRepository) GetRefreshToken(ctx context.Context, token string) (*en
 func (r *AuthRepository) CreateRefreshToken(ctx context.Context, token *entity.RefreshSessions) error {
 	db := r.txm.TxOrDB(ctx)
 
-	_, err := db.Exec(ctx, queries.CreateRefreshTokenQuery,
+	_, err := db.Exec(ctx, queries.QueryCreateRefreshToken,
 		token.RefreshToken,
 		token.UserID,
 		token.CreatedAt,
@@ -55,7 +55,7 @@ func (r *AuthRepository) CreateRefreshToken(ctx context.Context, token *entity.R
 func (r *AuthRepository) UpdateRefreshToken(ctx context.Context, oldToken string, token *entity.RefreshSessions) error {
 	db := r.txm.TxOrDB(ctx)
 
-	_, err := db.Exec(ctx, queries.UpdateRefreshTokenQuery,
+	_, err := db.Exec(ctx, queries.QueryUpdateRefreshToken,
 		oldToken,
 		token.RefreshToken,
 		token.UserID,
@@ -71,7 +71,7 @@ func (r *AuthRepository) UpdateRefreshToken(ctx context.Context, oldToken string
 func (r *AuthRepository) DeleteRefreshToken(ctx context.Context, token string) error {
 	db := r.txm.TxOrDB(ctx)
 
-	_, err := db.Exec(ctx, queries.DeleteRefreshTokenQuery, token)
+	_, err := db.Exec(ctx, queries.QueryDeleteRefreshToken, token)
 	if err != nil {
 		return err
 	}

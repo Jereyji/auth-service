@@ -1,6 +1,8 @@
 package services
 
 import (
+	"fmt"
+
 	"github.com/Jereyji/auth-service.git/internal/domain/entity"
 	repos "github.com/Jereyji/auth-service.git/internal/domain/interface_repository"
 	"github.com/Jereyji/auth-service.git/internal/pkg/configs"
@@ -21,8 +23,8 @@ func NewAuthService(rep repos.RepositoryI, trm repos.TransactionManagerI, config
 	}
 }
 
-func (s AuthService) Register(ctx context.Context, username string, password string, accessLevel int) error {
-	user, err := entity.NewUser(username, password, accessLevel)
+func (s AuthService) Register(ctx context.Context, name, email, password string) error {
+	user, err := entity.NewUser(name, email, password)
 	if err != nil {
 		return err
 	}
@@ -40,8 +42,8 @@ func (s AuthService) Login(ctx context.Context, username, password string) (*ent
 		refreshToken *entity.RefreshSessions
 	)
 
-	s.trm.WithTransaction(ctx, func(ctx context.Context) error {
-		user, err := s.repository.GetUserByUsername(ctx, username)
+	err := s.trm.WithTransaction(ctx, func(ctx context.Context) error {
+		user, err := s.repository.GetUserByEmail(ctx, username)
 		if err != nil {
 			return err
 		}
@@ -50,7 +52,7 @@ func (s AuthService) Login(ctx context.Context, username, password string) (*ent
 			return err
 		}
 
-		accessToken, err = entity.NewAccessToken(user.ID, user.AccessLevel, s.config.AccessTokenExpiresIn, s.config.SecretKey)
+		accessToken, err = entity.NewAccessToken(user.ID, s.config.AccessTokenExpiresIn, s.config.SecretKey)
 		if err != nil {
 			return err
 		}
@@ -60,24 +62,29 @@ func (s AuthService) Login(ctx context.Context, username, password string) (*ent
 			return err
 		}
 
+		fmt.Println(refreshToken)
+
 		if err := s.repository.CreateRefreshToken(ctx, refreshToken); err != nil {
 			return err
 		}
 
 		return nil
 	})
+	if err != nil {
+		return nil, nil, err
+	}
 
 	return accessToken, refreshToken, nil
 }
 
-func (s AuthService) DummyLogin(ctx context.Context, username string, password string, accessLevel int) (*entity.AccessToken, *entity.RefreshSessions, error) {
+func (s AuthService) DummyLogin(ctx context.Context, name, email, password string) (*entity.AccessToken, *entity.RefreshSessions, error) {
 	var (
 		accessToken  *entity.AccessToken
 		refreshToken *entity.RefreshSessions
 	)
 
-	s.trm.WithTransaction(ctx, func(ctx context.Context) error {
-		user, err := entity.NewUser(username, password, accessLevel)
+	err := s.trm.WithTransaction(ctx, func(ctx context.Context) error {
+		user, err := entity.NewUser(name, email, password)
 		if err != nil {
 			return err
 		}
@@ -86,7 +93,7 @@ func (s AuthService) DummyLogin(ctx context.Context, username string, password s
 			return err
 		}
 
-		accessToken, err = entity.NewAccessToken(user.ID, user.AccessLevel, s.config.AccessTokenExpiresIn, s.config.SecretKey)
+		accessToken, err = entity.NewAccessToken(user.ID, s.config.AccessTokenExpiresIn, s.config.SecretKey)
 		if err != nil {
 			return err
 		}
@@ -102,6 +109,9 @@ func (s AuthService) DummyLogin(ctx context.Context, username string, password s
 
 		return nil
 	})
+	if err != nil {
+		return nil, nil, err
+	}
 
 	return accessToken, refreshToken, nil
 }
@@ -112,7 +122,7 @@ func (s AuthService) RefreshTokens(ctx context.Context, refreshToken string) (*e
 		newRefreshToken *entity.RefreshSessions
 	)
 
-	s.trm.WithTransaction(ctx, func(ctx context.Context) error {
+	err := s.trm.WithTransaction(ctx, func(ctx context.Context) error {
 		refreshTokenDB, err := s.repository.GetRefreshToken(ctx, refreshToken)
 		if err != nil {
 			return err
@@ -132,7 +142,7 @@ func (s AuthService) RefreshTokens(ctx context.Context, refreshToken string) (*e
 			return err
 		}
 
-		newAccessToken, err = entity.NewAccessToken(user.ID, user.AccessLevel, s.config.AccessTokenExpiresIn, s.config.SecretKey)
+		newAccessToken, err = entity.NewAccessToken(user.ID, s.config.AccessTokenExpiresIn, s.config.SecretKey)
 		if err != nil {
 			return err
 		}
@@ -148,6 +158,9 @@ func (s AuthService) RefreshTokens(ctx context.Context, refreshToken string) (*e
 
 		return nil
 	})
+	if err != nil {
+		return nil, nil, err
+	}
 
 	return newAccessToken, newRefreshToken, nil
 }
@@ -158,5 +171,4 @@ func (s AuthService) Logout(ctx context.Context, refreshToken string) error {
 	}
 
 	return nil
-
 }

@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"log/slog"
 	"os"
@@ -28,6 +29,7 @@ func main() {
 		log.Fatal("Error reading environment variables: ", err)
 	}
 
+	fmt.Println(config.DatabaseURL)
 	postgresDB, err := postgres.NewPostgresDB(ctx, config.DatabaseURL)
 	if err != nil {
 		log.Fatal("Error initialization postgres database: ", err)

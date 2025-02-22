@@ -11,16 +11,16 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-func (r *AuthRepository) GetUserByUsername(ctx context.Context, username string) (*entity.User, error) {
+func (r *AuthRepository) GetUserByEmail(ctx context.Context, email string) (*entity.User, error) {
 	db := r.txm.TxOrDB(ctx)
 
 	var user entity.User
 
-	err := db.QueryRow(ctx, queries.GetUserByUsernameQuery, username).Scan(
+	err := db.QueryRow(ctx, queries.QueryGetUserByEmail, email).Scan(
 		&user.ID,
-		&user.Username,
+		&user.Email,
+		&user.Name,
 		&user.HashedPassword,
-		&user.AccessLevel,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -38,11 +38,11 @@ func (r *AuthRepository) GetUser(ctx context.Context, userID uuid.UUID) (*entity
 
 	var user entity.User
 
-	err := db.QueryRow(ctx, queries.GetUserByIDQuery, userID).Scan(
+	err := db.QueryRow(ctx, queries.QueryGetUserByID, userID).Scan(
 		&user.ID,
-		&user.Username,
+		&user.Email,
+		&user.Name,
 		&user.HashedPassword,
-		&user.AccessLevel,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -58,11 +58,11 @@ func (r *AuthRepository) GetUser(ctx context.Context, userID uuid.UUID) (*entity
 func (r *AuthRepository) CreateUser(ctx context.Context, user *entity.User) error {
 	db := r.txm.TxOrDB(ctx)
 
-	_, err := db.Exec(ctx, queries.CreateUserQuery,
+	_, err := db.Exec(ctx, queries.QueryCreateUser,
 		user.ID,
-		user.Username,
+		user.Email,
+		user.Name,
 		user.HashedPassword,
-		user.AccessLevel,
 	)
 	if err != nil {
 		if ifUniqueViolation(err) {
@@ -78,11 +78,11 @@ func (r *AuthRepository) CreateUser(ctx context.Context, user *entity.User) erro
 func (r *AuthRepository) UpdateUser(ctx context.Context, user *entity.User) error {
 	db := r.txm.TxOrDB(ctx)
 
-	_, err := db.Exec(ctx, queries.UpdateUserQuery,
+	_, err := db.Exec(ctx, queries.QueryUpdateUser,
 		user.ID,
-		user.Username,
+		user.Email,
+		user.Name,
 		user.HashedPassword,
-		user.AccessLevel,
 	)
 	if err != nil {
 		return err
@@ -94,7 +94,7 @@ func (r *AuthRepository) UpdateUser(ctx context.Context, user *entity.User) erro
 func (r *AuthRepository) DeleteUser(ctx context.Context, userID uuid.UUID) error {
 	db := r.txm.TxOrDB(ctx)
 
-	_, err := db.Exec(ctx, queries.DeleteUserQuery, userID)
+	_, err := db.Exec(ctx, queries.QueryDeleteUser, userID)
 	if err != nil {
 		return err
 	}

@@ -2,14 +2,14 @@ package entity
 
 import (
 	"errors"
+	"time"
+
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
-	"time"
 )
 
 type TokenPayload struct {
-	UserID      uuid.UUID `json:"user_id"`
-	AccessLevel int       `json:"access_level"`
+	UserID uuid.UUID `json:"user_id"`
 }
 
 type TokenClaims struct {
@@ -21,7 +21,7 @@ type AccessToken struct {
 	Token string
 }
 
-func NewAccessToken(userID uuid.UUID, accessLevel int, expiresIn time.Duration, secretKey string) (*AccessToken, error) {
+func NewAccessToken(userID uuid.UUID, expiresIn time.Duration, secretKey string) (*AccessToken, error) {
 	claims := TokenClaims{
 		RegisteredClaims: jwt.RegisteredClaims{
 			IssuedAt: &jwt.NumericDate{
@@ -32,8 +32,7 @@ func NewAccessToken(userID uuid.UUID, accessLevel int, expiresIn time.Duration, 
 			},
 		},
 		TokenPayload: TokenPayload{
-			UserID:      userID,
-			AccessLevel: accessLevel,
+			UserID: userID,
 		},
 	}
 
@@ -67,12 +66,3 @@ func ValidateAccessToken(accessToken, secretKey string) (*TokenClaims, error) {
 
 	return &claims, nil
 }
-
-func (c TokenClaims) CheckAccessLevel(accessLevel int) error {
-	if c.AccessLevel != accessLevel {
-		return ErrInsufficientAccessLevel
-	}
-
-	return nil
-}
-

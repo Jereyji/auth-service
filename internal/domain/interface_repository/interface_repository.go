@@ -9,7 +9,7 @@ import (
 
 type RepositoryI interface {
 	GetUser(ctx context.Context, userID uuid.UUID) (*entity.User, error)
-	GetUserByUsername(ctx context.Context, username string) (*entity.User, error)
+	GetUserByEmail(ctx context.Context, email string) (*entity.User, error)
 	CreateUser(ctx context.Context, user *entity.User) error
 	UpdateUser(ctx context.Context, user *entity.User) error
 	DeleteUser(ctx context.Context, userID uuid.UUID) error

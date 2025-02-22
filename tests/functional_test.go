@@ -26,39 +26,39 @@ func TestSuccessRegistration(t *testing.T) {
 	}{
 		{
 			RegisterRequest: handlers.RegisterRequest{
-				Username:    "Andrey",
-				Password:    "1234",
-				AccessLevel: 1,
+				Name:     "Andrey",
+				Email:    "Andrey@mail.ru",
+				Password: "1234",
 			},
 			ExpectedStatus: http.StatusOK,
 		},
 		{
 			RegisterRequest: handlers.RegisterRequest{
-				Username:    "Alesha",
-				Password:    "1234",
-				AccessLevel: 2,
+				Name:     "Alesha",
+				Email:    "Alesha@mail.ru",
+				Password: "1234",
 			},
 			ExpectedStatus: http.StatusOK,
 		},
 		{
 			RegisterRequest: handlers.RegisterRequest{
-				Username:    "Alex",
-				Password:    "1234",
-				AccessLevel: 2,
+				Name:     "Alex",
+				Email:    "Alex@mail.ru",
+				Password: "1234",
 			},
 			ExpectedStatus: http.StatusOK,
 		},
 	}
 
 	for _, tc := range cases {
-		t.Run("success registration user", func(t *testing.T) {
+		t.Run("Registration user", func(t *testing.T) {
 			request := bytes.NewBufferString(fmt.Sprintf(`
 			{
-			"username":"%s",
-			"password":"%s",
-			"access_level":%d
+			"name":"%s",
+			"email":"%s",
+			"password":"%s"
 			}
-			`, tc.RegisterRequest.Username, tc.RegisterRequest.Password, tc.RegisterRequest.AccessLevel))
+			`, tc.RegisterRequest.Name, tc.RegisterRequest.Email, tc.RegisterRequest.Password))
 
 			resp, err := http.Post(registrationAddr, contentTypeJSON, request)
 			require.NoError(t, err)
@@ -79,28 +79,28 @@ func TestFailRegistration(t *testing.T) {
 	}{
 		{
 			RegisterRequest1: handlers.RegisterRequest{
-				Username:    "Boris",
-				Password:    "1234",
-				AccessLevel: 1,
+				Name:     "Boris",
+				Email:    "Boris@mail.ru",
+				Password: "1234",
 			},
 			RegisterRequest2: handlers.RegisterRequest{
-				Username:    "Boris",
-				Password:    "1234",
-				AccessLevel: 1,
+				Name:     "Boris",
+				Email:    "Boris@mail.ru",
+				Password: "1234",
 			},
 			ExpectedStatus1: http.StatusOK,
 			ExpectedStatus2: http.StatusConflict,
 		},
 		{
 			RegisterRequest1: handlers.RegisterRequest{
-				Username:    "Borya",
-				Password:    "1234",
-				AccessLevel: 1,
+				Name:     "Borya",
+				Email:    "Borya@mail.ru",
+				Password: "1234",
 			},
 			RegisterRequest2: handlers.RegisterRequest{
-				Username:    "Borya",
-				Password:    "1234",
-				AccessLevel: 2,
+				Name:     "Borya",
+				Email:    "Borya@mail.ru",
+				Password: "1234",
 			},
 			ExpectedStatus1: http.StatusOK,
 			ExpectedStatus2: http.StatusConflict,
@@ -108,15 +108,15 @@ func TestFailRegistration(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		t.Run("fail registration: duplicate usernames", func(t *testing.T) {
+		t.Run("user with duplicate email", func(t *testing.T) {
 			request1 := bytes.NewBufferString(fmt.Sprintf(`
 			{
-			"username":"%s",
-			"password":"%s",
-			"access_level":%d
+			"name":"%s",
+			"email":"%s",
+			"password":"%s"
 			}
-			`, tc.RegisterRequest1.Username, tc.RegisterRequest1.Password, tc.RegisterRequest1.AccessLevel))
-
+			`, tc.RegisterRequest1.Name, tc.RegisterRequest1.Email, tc.RegisterRequest1.Password))
+			
 			resp1, err := http.Post(registrationAddr, contentTypeJSON, request1)
 			require.NoError(t, err)
 			defer resp1.Body.Close()
@@ -125,11 +125,11 @@ func TestFailRegistration(t *testing.T) {
 
 			request2 := bytes.NewBufferString(fmt.Sprintf(`
 			{
-			"username":"%s",
-			"password":"%s",
-			"access_level":%d
+			"name":"%s",
+			"email":"%s",
+			"password":"%s"
 			}
-			`, tc.RegisterRequest2.Username, tc.RegisterRequest2.Password, tc.RegisterRequest2.AccessLevel))
+			`, tc.RegisterRequest2.Name, tc.RegisterRequest2.Email, tc.RegisterRequest2.Password))
 
 			resp2, err := http.Post(registrationAddr, contentTypeJSON, request2)
 			require.NoError(t, err)
@@ -147,7 +147,21 @@ func TestSuccessLogin(t *testing.T) {
 	}{
 		{
 			LoginRequest: handlers.LoginRequest{
-				Username: "Vova",
+				Email:    "Andrey@mail.ru",
+				Password: "1234",
+			},
+			ExpectedStatus: http.StatusOK,
+		},
+		{
+			LoginRequest: handlers.LoginRequest{
+				Email:    "Alesha@mail.ru",
+				Password: "1234",
+			},
+			ExpectedStatus: http.StatusOK,
+		},
+		{
+			LoginRequest: handlers.LoginRequest{
+				Email:    "Alex@mail.ru",
 				Password: "1234",
 			},
 			ExpectedStatus: http.StatusOK,
@@ -155,21 +169,34 @@ func TestSuccessLogin(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		t.Run("Success login", func(t *testing.T) {
+		t.Run("Login user", func(t *testing.T) {
 			request := bytes.NewBufferString(fmt.Sprintf(`
 			{
-			"username":"%s",
-			"password":"%s"
+				"email":"%s",
+				"password":"%s"
 			}
-			`, tc.LoginRequest.Username, tc.LoginRequest.Password))
+			`, tc.LoginRequest.Email, tc.LoginRequest.Password))
 
 			resp, err := http.Post(loginAddr, contentTypeJSON, request)
 			require.NoError(t, err)
+			defer resp.Body.Close()
 
 			assert.Equal(t, tc.ExpectedStatus, resp.StatusCode)
 
-			defer resp.Body.Close()
+			cookies := resp.Cookies()
 
+			var accessToken, refreshToken string
+			for _, cookie := range cookies {
+				if cookie.Name == "access_token" {
+					accessToken = cookie.Value
+				}
+				if cookie.Name == "refresh_token" {
+					refreshToken = cookie.Value
+				}
+			}
+
+			assert.NotEmpty(t, accessToken)
+			assert.NotEmpty(t, refreshToken)
 		})
 	}
 }
