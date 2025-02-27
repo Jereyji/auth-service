@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/Jereyji/auth-service.git/internal/presentation/handlers"
+	"github.com/Jereyji/auth-service/internal/presentation/handlers"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -18,7 +18,7 @@ const (
 	loginAddr        = Addr + "/auth/login"
 )
 
-// Should correctly register user and admin
+// Should correctly register users
 func TestSuccessRegistration(t *testing.T) {
 	cases := []struct {
 		RegisterRequest handlers.RegisterRequest
@@ -27,7 +27,7 @@ func TestSuccessRegistration(t *testing.T) {
 		{
 			RegisterRequest: handlers.RegisterRequest{
 				Name:     "Andrey",
-				Email:    "Andrey@mail.ru",
+				Email:    "Andrey@example.com",
 				Password: "1234",
 			},
 			ExpectedStatus: http.StatusOK,
@@ -35,7 +35,7 @@ func TestSuccessRegistration(t *testing.T) {
 		{
 			RegisterRequest: handlers.RegisterRequest{
 				Name:     "Alesha",
-				Email:    "Alesha@mail.ru",
+				Email:    "Alesha@example.com",
 				Password: "1234",
 			},
 			ExpectedStatus: http.StatusOK,
@@ -43,7 +43,7 @@ func TestSuccessRegistration(t *testing.T) {
 		{
 			RegisterRequest: handlers.RegisterRequest{
 				Name:     "Alex",
-				Email:    "Alex@mail.ru",
+				Email:    "Alex@example.com",
 				Password: "1234",
 			},
 			ExpectedStatus: http.StatusOK,
@@ -80,12 +80,12 @@ func TestFailRegistration(t *testing.T) {
 		{
 			RegisterRequest1: handlers.RegisterRequest{
 				Name:     "Boris",
-				Email:    "Boris@mail.ru",
+				Email:    "Boris@example.com",
 				Password: "1234",
 			},
 			RegisterRequest2: handlers.RegisterRequest{
 				Name:     "Boris",
-				Email:    "Boris@mail.ru",
+				Email:    "Boris@example.com",
 				Password: "1234",
 			},
 			ExpectedStatus1: http.StatusOK,
@@ -94,12 +94,12 @@ func TestFailRegistration(t *testing.T) {
 		{
 			RegisterRequest1: handlers.RegisterRequest{
 				Name:     "Borya",
-				Email:    "Borya@mail.ru",
+				Email:    "Borya@example.com",
 				Password: "1234",
 			},
 			RegisterRequest2: handlers.RegisterRequest{
 				Name:     "Borya",
-				Email:    "Borya@mail.ru",
+				Email:    "Borya@example.com",
 				Password: "1234",
 			},
 			ExpectedStatus1: http.StatusOK,
@@ -116,7 +116,7 @@ func TestFailRegistration(t *testing.T) {
 			"password":"%s"
 			}
 			`, tc.RegisterRequest1.Name, tc.RegisterRequest1.Email, tc.RegisterRequest1.Password))
-			
+
 			resp1, err := http.Post(registrationAddr, contentTypeJSON, request1)
 			require.NoError(t, err)
 			defer resp1.Body.Close()
@@ -147,21 +147,21 @@ func TestSuccessLogin(t *testing.T) {
 	}{
 		{
 			LoginRequest: handlers.LoginRequest{
-				Email:    "Andrey@mail.ru",
+				Email:    "Andrey@example.com",
 				Password: "1234",
 			},
 			ExpectedStatus: http.StatusOK,
 		},
 		{
 			LoginRequest: handlers.LoginRequest{
-				Email:    "Alesha@mail.ru",
+				Email:    "Alesha@example.com",
 				Password: "1234",
 			},
 			ExpectedStatus: http.StatusOK,
 		},
 		{
 			LoginRequest: handlers.LoginRequest{
-				Email:    "Alex@mail.ru",
+				Email:    "Alex@example.com",
 				Password: "1234",
 			},
 			ExpectedStatus: http.StatusOK,
@@ -197,6 +197,52 @@ func TestSuccessLogin(t *testing.T) {
 
 			assert.NotEmpty(t, accessToken)
 			assert.NotEmpty(t, refreshToken)
+		})
+	}
+}
+
+func TestFailLogin(t *testing.T) {
+	cases := []struct {
+		LoginRequest   handlers.LoginRequest
+		ExpectedStatus int
+	}{
+		{
+			LoginRequest: handlers.LoginRequest{
+				Email:    "Andrey@example.com",
+				Password: "12345435",
+			},
+			ExpectedStatus: http.StatusUnauthorized,
+		},
+		{
+			LoginRequest: handlers.LoginRequest{
+				Email:    "Alesha111111111@example.com",
+				Password: "1234",
+			},
+			ExpectedStatus: http.StatusUnauthorized,
+		},
+		{
+			LoginRequest: handlers.LoginRequest{
+				Email:    "Alexey777@example.com",
+				Password: "1234",
+			},
+			ExpectedStatus: http.StatusUnauthorized,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run("Login user", func(t *testing.T) {
+			request := bytes.NewBufferString(fmt.Sprintf(`
+			{
+				"email":"%s",
+				"password":"%s"
+			}
+			`, tc.LoginRequest.Email, tc.LoginRequest.Password))
+
+			resp, err := http.Post(loginAddr, contentTypeJSON, request)
+			require.NoError(t, err)
+			defer resp.Body.Close()
+
+			assert.Equal(t, tc.ExpectedStatus, resp.StatusCode)
 		})
 	}
 }

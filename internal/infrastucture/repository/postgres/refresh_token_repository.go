@@ -3,9 +3,9 @@ package repository
 import (
 	"errors"
 
-	"github.com/Jereyji/auth-service.git/internal/domain/entity"
-	repos "github.com/Jereyji/auth-service.git/internal/domain/interface_repository"
-	"github.com/Jereyji/auth-service.git/internal/infrastucture/repository/postgres/queries"
+	"github.com/Jereyji/auth-service/internal/domain/entity"
+	repos "github.com/Jereyji/auth-service/internal/domain/interface_repository"
+	"github.com/Jereyji/auth-service/internal/infrastucture/repository/postgres/queries"
 	"github.com/jackc/pgx/v5"
 	"golang.org/x/net/context"
 )

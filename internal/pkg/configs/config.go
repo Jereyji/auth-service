@@ -1,51 +1,28 @@
 package configs
 
 import (
-	"fmt"
-	"time"
-
 	"github.com/ilyakaznacheev/cleanenv"
+	"github.com/joho/godotenv"
 )
 
-type DatabaseConfig struct {
-	Host     string `env:"POSTGRES_HOST" env-default:"postgres"`
-	Port     string `env:"POSTGRES_PORT" env-default:"5432"`
-	Name     string `env:"POSTGRES_DB" env-default:"auth_db"`
-	User     string `env:"POSTGRES_USER" env-default:"user"`
-	Password string `env:"POSTGRES_PASSWORD" env-required:"true"`
-	SSLMode  string `env:"POSTGRES_SSLMODE" env-default:"disable"`
-}
-
-type AuthConfig struct {
-	SecretKey             string        `env:"SECRET_KEY" env-required:"true"`
-	AccessTokenExpiresIn  time.Duration `env:"ACCESS_TOKEN_EXPIRATION" env-default:"30m"`
-	RefreshTokenExpiresIn time.Duration `env:"REFRESH_TOKEN_EXPIRATION" env-default:"48h"`
-}
+const envPath = "deployments/.env"
 
 type Config struct {
-	Database    DatabaseConfig // Сделали экспортируемым
-	DatabaseURL string         `env:"-"`
-	AuthService AuthConfig     // Сделали экспортируемым
+	Database    DatabaseConfig
+	AuthService AuthConfig   `yaml:"tokens"`
+	Server      ServerConfig `yaml:"server"`
 }
 
-func NewConfig() (*Config, error) {
+func NewConfig(configPath string) (*Config, error) {
 	var cfg Config
 
-	err := cleanenv.ReadEnv(&cfg)
-	if err != nil {
+	if err := godotenv.Load(envPath); err != nil {
 		return nil, err
 	}
 
-	// Формируем URL для базы данных
-	cfg.DatabaseURL = fmt.Sprintf(
-		"postgres://%s:%s@%s:%s/%s?sslmode=%s",
-		cfg.Database.User,
-		cfg.Database.Password,
-		cfg.Database.Host,
-		cfg.Database.Port,
-		cfg.Database.Name,
-		cfg.Database.SSLMode,
-	)
+	if err := cleanenv.ReadConfig(configPath, &cfg); err != nil {
+		return nil, err
+	}
 
 	return &cfg, nil
 }

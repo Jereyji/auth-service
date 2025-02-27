@@ -2,19 +2,18 @@ package main
 
 import (
 	"context"
-	"fmt"
-	"log"
 	"log/slog"
 	"os"
 	"os/signal"
 	"syscall"
 
-	"github.com/Jereyji/auth-service.git/internal/application/services"
-	"github.com/Jereyji/auth-service.git/internal/infrastucture/database/postgres"
-	repository "github.com/Jereyji/auth-service.git/internal/infrastucture/repository/postgres"
-	"github.com/Jereyji/auth-service.git/internal/pkg/configs"
-	"github.com/Jereyji/auth-service.git/internal/presentation/handlers"
-	trm "github.com/Jereyji/auth-service.git/pkg/transaction_manager"
+	"github.com/Jereyji/auth-service/internal/app/auth"
+	"github.com/Jereyji/auth-service/internal/infrastucture/database/postgres"
+	"github.com/Jereyji/auth-service/internal/pkg/configs"
+)
+
+const (
+	configPath = "config/config.yaml"
 )
 
 func main() {
@@ -24,30 +23,22 @@ func main() {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 	slog.SetDefault(logger)
 
-	config, err := configs.NewConfig()
+	config, err := configs.NewConfig(configPath)
 	if err != nil {
-		log.Fatal("Error reading environment variables: ", err)
+		logger.Error("error reading environment variables: ", slog.String("error", err.Error()))
+		os.Exit(1)
 	}
 
-	fmt.Println(config.DatabaseURL)
-	postgresDB, err := postgres.NewPostgresDB(ctx, config.DatabaseURL)
+	postgresDB, err := postgres.NewPostgresDB(ctx, config.Database)
 	if err != nil {
-		log.Fatal("Error initialization postgres database: ", err)
+		logger.Error("error initializing postgres database: ", slog.String("error", err.Error()))
 	}
-	defer postgresDB.Close()
+	defer postgresDB.Pool.Close()
 
-	trm := trm.NewTransactionManager(postgresDB)
+	app := auth.NewAuthApp(ctx, config, logger, postgresDB)
 
-	var (
-		repos   = repository.NewAuthRepository(trm)
-		service = services.NewAuthService(repos, trm, &config.AuthService)
-		handler = handlers.NewHandler(service, &config.AuthService, logger)
-	)
-
-	r := handler.InitRoutes()
-
-	err = r.Run("0.0.0.0:8080")
-	if err == nil {
-		log.Fatal("Error running auth-service: ", err)
+	if err := app.Run(ctx); err != nil {
+		logger.Error("server error: ", slog.String("error", err.Error()))
+		os.Exit(1)
 	}
 }

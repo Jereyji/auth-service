@@ -3,6 +3,5 @@ package entity
 import "errors"
 
 var (
-	ErrInsufficientAccessLevel   = errors.New("insufficient access level")
-	ErrInvalidUsernameOrPassword = errors.New("unvalid username or password")
+	ErrInvalidEmailOrPassword = errors.New("invalid username or password")
 )

@@ -15,4 +15,8 @@ FROM alpine
 
 WORKDIR /app
 
+COPY deployments/.env /app/deployments/.env
+
+COPY config/config.yaml /app/config/config.yaml
+
 COPY --from=builder /build/main /app/main

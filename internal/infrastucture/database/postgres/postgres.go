@@ -2,12 +2,28 @@ package postgres
 
 import (
 	"context"
+	"fmt"
 
+	"github.com/Jereyji/auth-service/internal/pkg/configs"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-func NewPostgresDB(ctx context.Context, connString string) (*pgxpool.Pool, error) {
-	pool, err := pgxpool.New(ctx, connString)
+type PostgresDB struct {
+	Pool *pgxpool.Pool
+}
+
+func NewPostgresDB(ctx context.Context, cfg configs.DatabaseConfig) (*PostgresDB, error) {
+	databaseURL := fmt.Sprintf(
+		"postgres://%s:%s@%s:%s/%s?sslmode=%s",
+		cfg.User,
+		cfg.Password,
+		cfg.Host,
+		cfg.Port,
+		cfg.Name,
+		cfg.SSLMode,
+	)
+
+	pool, err := pgxpool.New(ctx, databaseURL)
 	if err != nil {
 		return nil, err
 	}
@@ -16,5 +32,5 @@ func NewPostgresDB(ctx context.Context, connString string) (*pgxpool.Pool, error
 		return nil, err
 	}
 
-	return pool, nil
+	return &PostgresDB{pool}, nil
 }

@@ -14,7 +14,9 @@ import (
 
 const retries = 3
 
-var txKeyValue = string("tx")
+type txKeyType struct{}
+
+var txKey = txKeyType{}
 
 type Transaction interface {
 	Begin(ctx context.Context) (pgx.Tx, error)
@@ -45,31 +47,33 @@ func (m TransactionManager) WithTransaction(ctx context.Context, f func(context.
 		AccessMode: pgx.ReadWrite,
 	}
 
-	if _, ok := ctx.Value(txKeyValue).(Transaction); ok {
+	if _, ok := ctx.Value(txKey).(Transaction); ok {
 		return f(ctx)
 	}
 
-	if err := retry.Do(func() error {
-		tx, err := m.db.BeginTx(ctx, txOptions)
-		if err != nil {
-			return err
-		}
-
-		ctxWithTx := context.WithValue(ctx, txKeyValue, tx)
-		if err := f(ctxWithTx); err != nil {
-			if errRollback := tx.Rollback(ctx); errRollback != nil {
-				return errors.Join(err, errRollback)
+	err := retry.Do(
+		func() error {
+			tx, err := m.db.BeginTx(ctx, txOptions)
+			if err != nil {
+				return err
 			}
 
-			return err
-		}
+			ctxWithTx := context.WithValue(ctx, txKey, tx)
+			if err := f(ctxWithTx); err != nil {
+				if errRollback := tx.Rollback(ctx); errRollback != nil {
+					return errors.Join(err, errRollback)
+				}
 
-		if err := tx.Commit(ctx); err != nil {
-			return err
-		}
+				return err
+			}
 
-		return nil
-	}, retry.Attempts(retries), retry.RetryIf(isSerializationError)); err != nil {
+			if err := tx.Commit(ctx); err != nil {
+				return err
+			}
+
+			return nil
+		}, retry.Attempts(retries), retry.RetryIf(isSerializationError), retry.LastErrorOnly(true))
+	if err != nil {
 		return err
 	}
 
@@ -77,7 +81,7 @@ func (m TransactionManager) WithTransaction(ctx context.Context, f func(context.
 }
 
 func (m TransactionManager) TxOrDB(ctx context.Context) Transaction {
-	tx, ok := ctx.Value(txKeyValue).(Transaction)
+	tx, ok := ctx.Value(txKey).(Transaction)
 	if !ok {
 		return m.db
 	}

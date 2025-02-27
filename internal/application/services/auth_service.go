@@ -1,11 +1,9 @@
 package services
 
 import (
-	"fmt"
-
-	"github.com/Jereyji/auth-service.git/internal/domain/entity"
-	repos "github.com/Jereyji/auth-service.git/internal/domain/interface_repository"
-	"github.com/Jereyji/auth-service.git/internal/pkg/configs"
+	"github.com/Jereyji/auth-service/internal/domain/entity"
+	repos "github.com/Jereyji/auth-service/internal/domain/interface_repository"
+	"github.com/Jereyji/auth-service/internal/pkg/configs"
 	"golang.org/x/net/context"
 )
 
@@ -61,8 +59,6 @@ func (s AuthService) Login(ctx context.Context, username, password string) (*ent
 		if err != nil {
 			return err
 		}
-
-		fmt.Println(refreshToken)
 
 		if err := s.repository.CreateRefreshToken(ctx, refreshToken); err != nil {
 			return err

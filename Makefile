@@ -22,3 +22,7 @@ down-service:
 .PHONY: run-service
 run-service:
 	go run $(SERVICE_PATH)
+
+.PHONY: run-functional-tests
+run-functional-tests:
+	go test tests/functional_test.go

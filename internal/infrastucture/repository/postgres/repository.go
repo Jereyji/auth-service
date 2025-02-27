@@ -3,7 +3,7 @@ package repository
 import (
 	"errors"
 
-	trm "github.com/Jereyji/auth-service.git/pkg/transaction_manager"
+	trm "github.com/Jereyji/auth-service/pkg/transaction_manager"
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5/pgconn"
 )

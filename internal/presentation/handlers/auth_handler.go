@@ -5,12 +5,50 @@ import (
 	"log/slog"
 	"net/http"
 
-	"github.com/Jereyji/auth-service.git/internal/domain/entity"
-	repos "github.com/Jereyji/auth-service.git/internal/domain/interface_repository"
+	"github.com/Jereyji/auth-service/internal/application/services"
+	"github.com/Jereyji/auth-service/internal/domain/entity"
+	repos "github.com/Jereyji/auth-service/internal/domain/interface_repository"
+	"github.com/Jereyji/auth-service/internal/pkg/configs"
 	"github.com/gin-gonic/gin"
 )
 
-func (h Handler) Register(c *gin.Context) {
+var (
+	ErrInvalidInput = errors.New("invalid input").Error()
+)
+
+type AuthHandler struct {
+	service            *services.AuthService
+	config             *configs.AuthConfig
+	accessTokenCookie  http.Cookie
+	refreshTokenCookie http.Cookie
+	logger             *slog.Logger
+}
+
+func NewAuthHandler(serv *services.AuthService, config *configs.AuthConfig, slog *slog.Logger) *AuthHandler {
+	return &AuthHandler{
+		service: serv,
+		config:  config,
+		accessTokenCookie: http.Cookie{
+			Name:     "access_token",
+			Path:     "/",
+			Domain:   "",
+			MaxAge:   int(config.AccessTokenExpiresIn.Seconds()),
+			Secure:   false,
+			HttpOnly: true,
+		},
+		refreshTokenCookie: http.Cookie{
+			Name:     "refresh_token",
+			Path:     "/auth",
+			Domain:   "",
+			MaxAge:   int(config.RefreshTokenExpiresIn.Seconds()),
+			Secure:   false,
+			HttpOnly: true,
+		},
+		logger: slog,
+	}
+}
+
+func (h AuthHandler) Register(c *gin.Context) {
 	var user RegisterRequest
 
 	if err := c.ShouldBindJSON(&user); err != nil {
@@ -24,7 +62,7 @@ func (h Handler) Register(c *gin.Context) {
 			return
 		}
 
-		h.slog.Error("registration user: ", slog.String("error", err.Error()))
+		h.logger.Error("registration user: ", slog.String("error", err.Error()))
 		c.Status(http.StatusInternalServerError)
 		return
 	}
@@ -34,7 +72,7 @@ func (h Handler) Register(c *gin.Context) {
 	})
 }
 
-func (h Handler) Login(c *gin.Context) {
+func (h AuthHandler) Login(c *gin.Context) {
 	var user LoginRequest
 
 	if err := c.ShouldBindJSON(&user); err != nil {
@@ -44,17 +82,12 @@ func (h Handler) Login(c *gin.Context) {
 
 	accessToken, refreshToken, err := h.service.Login(c.Request.Context(), user.Email, user.Password)
 	if err != nil {
-		if errors.Is(err, repos.ErrNotFound) {
-			c.String(http.StatusNotFound, "%s : %s", err.Error(), user.Email)
+		if errors.Is(err, repos.ErrNotFound) || errors.Is(err, entity.ErrInvalidEmailOrPassword) {
+			c.String(http.StatusUnauthorized, "%s : %s", entity.ErrInvalidEmailOrPassword, user.Email)
 			return
 		}
 
-		if errors.Is(err, entity.ErrInvalidUsernameOrPassword) {
-			c.String(http.StatusUnauthorized, entity.ErrInvalidUsernameOrPassword.Error())
-			return
-		}
-
-		h.slog.Error("login user: ", slog.String("error", err.Error()))
+		h.logger.Error("login user: ", slog.String("error", err.Error()))
 		c.Status(http.StatusInternalServerError)
 		return
 	}
@@ -63,7 +96,7 @@ func (h Handler) Login(c *gin.Context) {
 	c.Status(http.StatusOK)
 }
 
-func (h Handler) DummyLogin(c *gin.Context) {
+func (h AuthHandler) DummyLogin(c *gin.Context) {
 	var user RegisterRequest
 
 	err := c.ShouldBindJSON(&user)
@@ -80,11 +113,11 @@ func (h Handler) DummyLogin(c *gin.Context) {
 		}
 
 		if errors.Is(err, repos.ErrNotFound) {
-			c.String(http.StatusNotFound, "%s : %s", err.Error(), user.Email)
+			c.String(http.StatusUnauthorized, "%s : %s", err.Error(), user.Email)
 			return
 		}
 
-		h.slog.Error("dummy login user: ", slog.String("error", err.Error()))
+		h.logger.Error("dummy login user: ", slog.String("error", err.Error()))
 		c.Status(http.StatusInternalServerError)
 		return
 	}
@@ -94,7 +127,7 @@ func (h Handler) DummyLogin(c *gin.Context) {
 	c.Status(http.StatusOK)
 }
 
-func (h Handler) RefreshTokens(c *gin.Context) {
+func (h AuthHandler) RefreshTokens(c *gin.Context) {
 	refreshTokenCookie, err := c.Cookie("refresh_token")
 	if err != nil {
 		c.String(http.StatusBadRequest, ErrInvalidInput)
@@ -103,12 +136,12 @@ func (h Handler) RefreshTokens(c *gin.Context) {
 
 	accessToken, refreshToken, err := h.service.RefreshTokens(c.Request.Context(), refreshTokenCookie)
 	if err != nil {
-		// if errors.Is(err, repos.ErrNotFound) {
-		// 	c.String(http.StatusNotFound, "%s : %s", err.Error(), refreshTokenCookie)
-		// 	return
-		// }
+		if errors.Is(err, repos.ErrNotFound) {
+			c.String(http.StatusUnauthorized, "%s : %s", err.Error(), refreshTokenCookie)
+			return
+		}
 
-		h.slog.Error("refreshing tokens: ", slog.String("error", err.Error()))
+		h.logger.Error("refreshing tokens: ", slog.String("error", err.Error()))
 		c.Status(http.StatusInternalServerError)
 		return
 	}
@@ -118,18 +151,24 @@ func (h Handler) RefreshTokens(c *gin.Context) {
 	c.Status(http.StatusOK)
 }
 
-func (h Handler) Logout(c *gin.Context) {
-	refreshTokenCookie, err := c.Cookie("refresh_token")
-	if err != nil {
-		c.String(http.StatusBadRequest, ErrInvalidInput)
-		return
-	}
+func (h AuthHandler) sendTokensInCookie(c *gin.Context, accessToken, refreshToken string) {
+	c.SetCookie(
+		h.accessTokenCookie.Name,
+		accessToken,
+		h.accessTokenCookie.MaxAge,
+		h.accessTokenCookie.Path,
+		h.accessTokenCookie.Domain,
+		h.accessTokenCookie.Secure,
+		h.accessTokenCookie.HttpOnly,
+	)
 
-	if err := h.service.Logout(c.Request.Context(), refreshTokenCookie); err != nil {
-		h.slog.Error("logouting user: ", slog.String("error", err.Error()))
-		c.Status(http.StatusInternalServerError)
-		return
-	}
-
-	c.Status(http.StatusOK)
+	c.SetCookie(
+		h.refreshTokenCookie.Name,
+		refreshToken,
+		h.refreshTokenCookie.MaxAge,
+		h.refreshTokenCookie.Path,
+		h.refreshTokenCookie.Domain,
+		h.refreshTokenCookie.Secure,
+		h.refreshTokenCookie.HttpOnly,
+	)
 }

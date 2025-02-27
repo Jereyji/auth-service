@@ -3,7 +3,7 @@ package repos
 import (
 	"context"
 
-	"github.com/Jereyji/auth-service.git/internal/domain/entity"
+	"github.com/Jereyji/auth-service/internal/domain/entity"
 	"github.com/google/uuid"
 )
 

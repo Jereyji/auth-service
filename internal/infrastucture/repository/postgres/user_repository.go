@@ -4,9 +4,9 @@ import (
 	"context"
 	"errors"
 
-	"github.com/Jereyji/auth-service.git/internal/domain/entity"
-	repos "github.com/Jereyji/auth-service.git/internal/domain/interface_repository"
-	"github.com/Jereyji/auth-service.git/internal/infrastucture/repository/postgres/queries"
+	"github.com/Jereyji/auth-service/internal/domain/entity"
+	repos "github.com/Jereyji/auth-service/internal/domain/interface_repository"
+	"github.com/Jereyji/auth-service/internal/infrastucture/repository/postgres/queries"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 )
@@ -16,13 +16,12 @@ func (r *AuthRepository) GetUserByEmail(ctx context.Context, email string) (*ent
 
 	var user entity.User
 
-	err := db.QueryRow(ctx, queries.QueryGetUserByEmail, email).Scan(
+	if err := db.QueryRow(ctx, queries.QueryGetUserByEmail, email).Scan(
 		&user.ID,
 		&user.Email,
 		&user.Name,
 		&user.HashedPassword,
-	)
-	if err != nil {
+	); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, repos.ErrNotFound
 		}
@@ -38,13 +37,12 @@ func (r *AuthRepository) GetUser(ctx context.Context, userID uuid.UUID) (*entity
 
 	var user entity.User
 
-	err := db.QueryRow(ctx, queries.QueryGetUserByID, userID).Scan(
+	if err := db.QueryRow(ctx, queries.QueryGetUserByID, userID).Scan(
 		&user.ID,
 		&user.Email,
 		&user.Name,
 		&user.HashedPassword,
-	)
-	if err != nil {
+	); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, repos.ErrNotFound
 		}

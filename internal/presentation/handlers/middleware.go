@@ -3,11 +3,11 @@ package handlers
 import (
 	"net/http"
 
-	"github.com/Jereyji/auth-service.git/internal/domain/entity"
+	"github.com/Jereyji/auth-service/internal/domain/entity"
 	"github.com/gin-gonic/gin"
 )
 
-func (h Handler) AuthModeratorMiddleware() gin.HandlerFunc {
+func (h AuthHandler) AuthModeratorMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		accessToken, err := c.Cookie(h.accessTokenCookie.Name)
 		if err != nil {

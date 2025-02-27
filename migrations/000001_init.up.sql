@@ -16,3 +16,7 @@ CREATE TABLE IF NOT EXISTS refresh_sessions
     created_at    TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
     expired_at    TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE INDEX idx_users_email ON users(email);
+
+CREATE INDEX idx_refresh_sessions_token ON refresh_sessions(refresh_token);

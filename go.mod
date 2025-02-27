@@ -1,4 +1,4 @@
-module github.com/Jereyji/auth-service.git
+module github.com/Jereyji/auth-service
 
 go 1.22.3
 
