@@ -1,0 +1,13 @@
+server:
+  address: :8080
+  read_timeout: 10s
+  write_timeout: 10s
+
+tokens:
+  access_expiration: 30m
+  refresh_expiration: 48h
+
+kafka:
+  brokers:
+    - "kafka:29092"
+  topic: "login-events"

@@ -2,11 +2,26 @@ services:
   auth-service:
     build:
       context: ..
-      dockerfile: Dockerfile
+      dockerfile: docker/auth.Dockerfile
     ports:
       - "8080:8080"
     depends_on:
       postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    env_file: ".env"
+    networks:
+      - service-network
+    command:
+      - ./main
+
+  sender-service:
+    build:
+      context: ..
+      dockerfile: docker/sender.Dockerfile
+    depends_on:
+      kafka:
         condition: service_healthy
     env_file: ".env"
     networks:
@@ -43,6 +58,56 @@ services:
     env_file: ".env"
     networks:
       - service-network
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.3.0
+    container_name: zookeeper
+    ports:
+      - "2181:2181"
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    networks:
+      - service-network
+
+  kafka:
+    image: confluentinc/cp-kafka:7.3.0
+    container_name: kafka
+    ports:
+      - "9092:9092"
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    networks:
+      - service-network
+    healthcheck:
+      test: ["CMD", "kafka-topics", "--list", "--bootstrap-server", "kafka:29092"]
+      interval: 10s
+      retries: 5
+      start_period: 15s
+      timeout: 10s
+
+  kafka-init:
+    image: confluentinc/cp-kafka:7.3.0
+    user: root
+    depends_on:
+      kafka:
+        condition: service_healthy
+    networks:
+      - service-network
+    command: >
+      bash -c "
+        echo -e 'Waiting for Kafka to be ready...' &&
+        cub kafka-ready -b kafka:29092 1 30 &&
+        kafka-topics --create --if-not-exists --bootstrap-server kafka:29092 --partitions 1 --replication-factor 1 --topic login-events
+      "
 
 volumes:
   postgres_data:
