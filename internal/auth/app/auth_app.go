@@ -2,11 +2,8 @@ package auth_app
 
 import (
 	"context"
-	"errors"
 	"log/slog"
-	"net"
 	"net/http"
-	"time"
 
 	auth_service "github.com/Jereyji/auth-service/internal/auth/application/services"
 	"github.com/Jereyji/auth-service/internal/auth/infrastucture/database/postgres"
@@ -14,8 +11,14 @@ import (
 	"github.com/Jereyji/auth-service/internal/auth/presentation/handlers"
 	"github.com/Jereyji/auth-service/internal/pkg/configs"
 	"github.com/Jereyji/auth-service/internal/pkg/kafka"
+	"github.com/Jereyji/auth-service/internal/pkg/server"
 	trm "github.com/Jereyji/auth-service/internal/pkg/transaction_manager"
 	"github.com/gin-gonic/gin"
+	"github.com/prometheus/client_golang/prometheus"
+)
+
+const (
+	ServiceName = "Auth Service"
 )
 
 type SecretManager struct {
@@ -23,10 +26,10 @@ type SecretManager struct {
 }
 
 type AuthApp struct {
-	logger            *slog.Logger
-	httpServer        *http.Server
+	httpServer        *server.HTTPServer
 	accessTokenCookie *http.Cookie
 	SecretMng         *SecretManager
+	logger            *slog.Logger
 }
 
 func NewAuthApp(
@@ -51,17 +54,18 @@ func NewAuthApp(
 
 	router := gin.Default()
 
+	router.Use(
+		PrometheusMiddleware(ServiceName),
+	)
+
+	prometheus.MustRegister(totalRequests, statusResponse, requestDuration)
+
 	InitRoutes(router, handler)
+	InitPrometheusRoutes(router)
 
-	srv := &http.Server{
-		Addr:         cfg.Server.Address,
-		Handler:      router,
-		BaseContext:  func(net.Listener) context.Context { return ctx },
-		ReadTimeout:  cfg.Server.ReadTimeout,
-		WriteTimeout: cfg.Server.WriteTimeout,
-	}
+	srv := server.NewHTTPServer(ctx, cfg.Server.Address, router, cfg.Server.ReadTimeout, cfg.Server.WriteTimeout, logger)
 
-	return &AuthApp{
+	return  &AuthApp{
 		httpServer:        srv,
 		accessTokenCookie: &accessTokenCookie,
 		SecretMng:         &SecretManager{cfg.Application.Tokens.SecretKey},
@@ -70,22 +74,7 @@ func NewAuthApp(
 }
 
 func (a AuthApp) Run(ctx context.Context) error {
-	go func() {
-		<-ctx.Done()
-
-		shutdownCtx, shutdownCancel := context.WithTimeout(ctx, 5*time.Second)
-		defer shutdownCancel()
-
-		if err := a.httpServer.Shutdown(shutdownCtx); err != nil {
-			a.logger.Warn("failed shutdown http server", slog.String("error", err.Error()))
-		}
-	}()
-
-	if err := a.httpServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-		return err
-	}
-
-	return nil
+	return a.httpServer.Run(ctx)
 }
 
 func initCookies(accessTokenExpiresIn, refreshTokenExpiresIn int) (http.Cookie, http.Cookie) {

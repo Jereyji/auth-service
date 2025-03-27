@@ -2,9 +2,11 @@ package auth_app
 
 import (
 	"net/http"
+	"strconv"
 
 	"github.com/Jereyji/auth-service/internal/auth/domain/entity"
 	"github.com/gin-gonic/gin"
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 func (a AuthApp) AuthModeratorMiddleware() gin.HandlerFunc {
@@ -27,5 +29,22 @@ func (a AuthApp) AuthModeratorMiddleware() gin.HandlerFunc {
 		c.Set("userID", userID)
 
 		c.Next()
+	}
+}
+
+func PrometheusMiddleware(serviceName string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		path := c.Request.URL.Path
+
+		timer := prometheus.NewTimer(requestDuration.WithLabelValues(serviceName, path))
+
+		c.Next()
+
+		timer.ObserveDuration()
+
+		status := c.Writer.Status()
+
+		statusResponse.WithLabelValues(serviceName, path, strconv.Itoa(status)).Inc()
+		totalRequests.WithLabelValues(serviceName, path).Inc()
 	}
 }

@@ -1,5 +1,6 @@
 services:
   auth-service:
+    container_name: auth_service
     build:
       context: ..
       dockerfile: docker/auth.Dockerfile
@@ -13,10 +14,10 @@ services:
     env_file: ".env"
     networks:
       - service-network
-    command:
-      - ./main
+    command: ["./main"]
 
   sender-service:
+    container_name: sender_service
     build:
       context: ..
       dockerfile: docker/sender.Dockerfile
@@ -26,8 +27,7 @@ services:
     env_file: ".env"
     networks:
       - service-network
-    command:
-      - ./main
+    command: ["./main"]
 
   postgres:
     container_name: auth_db
@@ -49,7 +49,10 @@ services:
   migrate:
     container_name: auth_db_migrate
     image: migrate/migrate:4
-    command: -path=../migrations/ -database "postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}?sslmode=${POSTGRES_SSLMODE}" up
+    command: >
+      -path=../migrations/ 
+      -database "postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}?sslmode=${POSTGRES_SSLMODE}" 
+      up
     depends_on:
       postgres:
         condition: service_healthy
@@ -60,8 +63,8 @@ services:
       - service-network
 
   zookeeper:
-    image: confluentinc/cp-zookeeper:7.3.0
     container_name: zookeeper
+    image: confluentinc/cp-zookeeper:latest
     ports:
       - "2181:2181"
     environment:
@@ -71,8 +74,8 @@ services:
       - service-network
 
   kafka:
-    image: confluentinc/cp-kafka:7.3.0
     container_name: kafka
+    image: confluentinc/cp-kafka:latest
     ports:
       - "9092:9092"
     depends_on:
@@ -95,7 +98,8 @@ services:
       timeout: 10s
 
   kafka-init:
-    image: confluentinc/cp-kafka:7.3.0
+    container_name: kafka_init
+    image: confluentinc/cp-kafka:latest
     user: root
     depends_on:
       kafka:
@@ -109,8 +113,60 @@ services:
         kafka-topics --create --if-not-exists --bootstrap-server kafka:29092 --partitions 1 --replication-factor 1 --topic login-events
       "
 
+  prometheus:
+    container_name: prometheus
+    image: prom/prometheus:latest
+    depends_on:
+      - node-exporter
+    volumes:
+      - ./../config/prometheus.yaml:/etc/prometheus/prometheus.yaml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yaml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--web.enable-lifecycle'
+    ports:
+      - "9090:9090"
+    networks:
+      - service-network
+    restart: unless-stopped
+
+  node-exporter:
+    container_name: node_exporter
+    image: prom/node-exporter:latest
+    restart: unless-stopped
+    ports:
+      - "9100:9100"
+    networks:
+      - service-network
+    command:
+      - '--path.rootfs=/host'
+    volumes:
+      - '/:/host:ro,rslave'
+
+  grafana:
+    container_name: grafana
+    image: grafana/grafana:latest
+    volumes:
+      - grafana_data:/var/lib/grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    ports:
+      - "3000:3000"
+    networks:
+      - service-network
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+
 volumes:
   postgres_data:
+  prometheus_data:
+  grafana_data:
 
 networks:
   service-network:
