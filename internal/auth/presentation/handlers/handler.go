@@ -107,8 +107,12 @@ func (h AuthHandler) Login(c *gin.Context) {
 		return
 	}
 
-	h.sendTokensInCookie(c, accessToken.Token, refreshToken.RefreshToken)
-	c.Status(http.StatusOK)
+	// h.sendTokensInCookie(c, accessToken.Token, refreshToken.RefreshToken)
+	// c.Status(http.StatusOK)
+	c.JSON(http.StatusOK, LoginResponse{
+		AccessToken:  accessToken.Token,
+		RefreshToken: refreshToken.RefreshToken,
+	})
 }
 
 func (h AuthHandler) DummyLogin(c *gin.Context) {

@@ -31,7 +31,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	postgresDB, err := postgres.NewPostgresDB(ctx, config.Database)
+	postgresDB, err := postgres.NewPostgresDB(ctx, config.Postgres)
 	if err != nil {
 		logger.Error("error initializing postgres database: ", slog.String("error", err.Error()))
 		os.Exit(1)

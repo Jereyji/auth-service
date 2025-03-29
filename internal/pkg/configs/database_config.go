@@ -1,6 +1,6 @@
 package configs
 
-type DatabaseConfig struct {
+type PostgresConfig struct {
 	Host     string `env:"POSTGRES_HOST" env-default:"postgres"`
 	Port     string `env:"POSTGRES_PORT" env-default:"5432"`
 	Name     string `env:"POSTGRES_DB" env-default:"auth_db"`

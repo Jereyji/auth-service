@@ -21,6 +21,7 @@ type ServerConfig struct {
 type AuthConfig struct {
 	Server      ServerConfig `yaml:"server"`
 	Kafka       KafkaConfig  `yaml:"kafka"`
-	Database    DatabaseConfig
+	Postgres    PostgresConfig
+	Redis       RedisConfig
 	Application ApplicationConfig
 }

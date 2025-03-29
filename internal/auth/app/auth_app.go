@@ -4,9 +4,13 @@ import (
 	"context"
 	"log/slog"
 	"net/http"
+	_ "net/http/pprof"
+
+	ginpprof "github.com/gin-contrib/pprof"
 
 	auth_service "github.com/Jereyji/auth-service/internal/auth/application/services"
 	"github.com/Jereyji/auth-service/internal/auth/infrastucture/database/postgres"
+	"github.com/Jereyji/auth-service/internal/auth/infrastucture/database/redis"
 	repository "github.com/Jereyji/auth-service/internal/auth/infrastucture/repository/postgres"
 	"github.com/Jereyji/auth-service/internal/auth/presentation/handlers"
 	"github.com/Jereyji/auth-service/internal/pkg/configs"
@@ -47,12 +51,14 @@ func NewAuthApp(
 	)
 
 	var (
-		repos   = repository.NewAuthRepository(trm)
+		repos   = repository.NewAuthRepository(trm, redis.NewRedisClient(&cfg.Redis))
 		service = auth_service.NewAuthService(repos, trm, &cfg.Application)
 		handler = handlers.NewAuthHandler(service, kafkaProducer, &accessTokenCookie, &refreshTokenCookie, logger)
 	)
 
 	router := gin.Default()
+
+	ginpprof.Register(router)
 
 	router.Use(
 		PrometheusMiddleware(ServiceName),
@@ -65,7 +71,7 @@ func NewAuthApp(
 
 	srv := server.NewHTTPServer(ctx, cfg.Server.Address, router, cfg.Server.ReadTimeout, cfg.Server.WriteTimeout, logger)
 
-	return  &AuthApp{
+	return &AuthApp{
 		httpServer:        srv,
 		accessTokenCookie: &accessTokenCookie,
 		SecretMng:         &SecretManager{cfg.Application.Tokens.SecretKey},

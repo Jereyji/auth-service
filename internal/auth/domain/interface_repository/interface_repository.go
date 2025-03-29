@@ -19,5 +19,3 @@ type RepositoryI interface {
 	UpdateRefreshToken(ctx context.Context, oldToken string, token *entity.RefreshSessions) error
 	DeleteRefreshToken(ctx context.Context, refreshToken string) error
 }
-
-//HouseSubscribe(houseID string) (error)
