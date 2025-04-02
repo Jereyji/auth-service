@@ -2,6 +2,6 @@ package repos
 
 import "context"
 
-type TransactionManagerI interface {
+type ITransactionManager interface {
 	WithTransaction(ctx context.Context, f func(ctx context.Context) error) error
 }

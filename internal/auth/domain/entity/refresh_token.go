@@ -3,34 +3,36 @@ package entity
 import (
 	"crypto/rand"
 	"encoding/base64"
-	"errors"
-	"github.com/google/uuid"
 	"time"
+
+	"github.com/google/uuid"
 )
 
-type RefreshSessions struct {
-	RefreshToken string
-	UserID       uuid.UUID
-	CreatedAt    time.Time
-	ExpiresIn    time.Time
+type RefreshToken struct {
+	Token     string
+	UserID    uuid.UUID
+	CreatedAt time.Time
+	ExpiresAt time.Time
 }
 
-func NewRefreshToken(userID uuid.UUID, expiresIn time.Duration) (*RefreshSessions, error) {
+func NewRefreshToken(userID uuid.UUID, expiresIn time.Duration) (*RefreshToken, error) {
 	token, err := generateRandomToken()
 	if err != nil {
 		return nil, err
 	}
 
-	return &RefreshSessions{
-		RefreshToken: token,
-		UserID:       userID,
-		CreatedAt:    time.Now(),
-		ExpiresIn:    time.Now().Add(expiresIn),
+	curTime := time.Now()
+	return &RefreshToken{
+		Token:     token,
+		UserID:    userID,
+		CreatedAt: curTime,
+		ExpiresAt: curTime.Add(expiresIn),
 	}, nil
 }
 
 func generateRandomToken() (string, error) {
 	tokenBytes := make([]byte, 32)
+
 	_, err := rand.Read(tokenBytes)
 	if err != nil {
 		return "", err
@@ -39,9 +41,9 @@ func generateRandomToken() (string, error) {
 	return base64.URLEncoding.EncodeToString(tokenBytes), nil
 }
 
-func (t RefreshSessions) ValidateRefreshToken() error {
-	if t.ExpiresIn.Before(time.Now()) {
-		return errors.New("refresh token has expired")
+func (t RefreshToken) ValidateRefreshToken() error {
+	if t.ExpiresAt.Before(time.Now()) {
+		return ErrInvalidRefreshToken
 	}
 
 	return nil

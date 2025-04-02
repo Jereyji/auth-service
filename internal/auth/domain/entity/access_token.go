@@ -1,7 +1,6 @@
 package entity
 
 import (
-	"errors"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -22,13 +21,14 @@ type AccessToken struct {
 }
 
 func NewAccessToken(userID uuid.UUID, expiresIn time.Duration, secretKey string) (*AccessToken, error) {
+	curTime := time.Now()
 	claims := TokenClaims{
 		RegisteredClaims: jwt.RegisteredClaims{
 			IssuedAt: &jwt.NumericDate{
-				Time: time.Now(),
+				Time: curTime,
 			},
 			ExpiresAt: &jwt.NumericDate{
-				Time: time.Now().Add(expiresIn),
+				Time: curTime.Add(expiresIn),
 			},
 		},
 		TokenPayload: TokenPayload{
@@ -37,7 +37,6 @@ func NewAccessToken(userID uuid.UUID, expiresIn time.Duration, secretKey string)
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-
 	accessToken, err := token.SignedString([]byte(secretKey))
 	if err != nil {
 		return nil, err
@@ -49,9 +48,9 @@ func NewAccessToken(userID uuid.UUID, expiresIn time.Duration, secretKey string)
 }
 
 func ValidateAccessToken(accessToken, secretKey string) (*TokenClaims, error) {
-	token, err := jwt.Parse(accessToken, func(token *jwt.Token) (interface{}, error) {
+	token, err := jwt.Parse(accessToken, func(token *jwt.Token) (any, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, errors.New("unexpected signing method")
+			return nil, ErrInvalidSigningMethod
 		}
 		return []byte(secretKey), nil
 	})
@@ -59,10 +58,38 @@ func ValidateAccessToken(accessToken, secretKey string) (*TokenClaims, error) {
 		return nil, err
 	}
 
-	claims, ok := token.Claims.(TokenClaims)
+	claims, ok := token.Claims.(jwt.MapClaims)
 	if !ok {
 		return nil, jwt.ErrTokenInvalidClaims
 	}
 
-	return &claims, nil
+	userIDStr, ok := claims["user_id"].(string)
+	if !ok {
+		return nil, jwt.ErrTokenInvalidClaims
+	}
+
+	userID, err := uuid.Parse(userIDStr)
+	if err != nil {
+		return nil, err
+	}
+
+	issuedAt, ok := claims["iat"].(float64)
+	if !ok {
+		return nil, jwt.ErrTokenInvalidClaims
+	}
+
+	expiresAt, ok := claims["exp"].(float64)
+	if !ok {
+		return nil, jwt.ErrTokenInvalidClaims
+	}
+
+	return &TokenClaims{
+		RegisteredClaims: jwt.RegisteredClaims{
+			IssuedAt:  &jwt.NumericDate{Time: time.Unix(int64(issuedAt), 0)},
+			ExpiresAt: &jwt.NumericDate{Time: time.Unix(int64(expiresAt), 0)},
+		},
+		TokenPayload: TokenPayload{
+			UserID: userID,
+		},
+	}, nil
 }
