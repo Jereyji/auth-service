@@ -5,6 +5,8 @@ import (
 
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
+
+	auth_errors "github.com/Jereyji/auth-service/internal/auth/domain/errors"
 )
 
 type User struct {
@@ -36,7 +38,7 @@ func hashPassword(password string) (string, error) {
 func (u User) VerifyPassword(password string) error {
 	if err := bcrypt.CompareHashAndPassword([]byte(u.HashedPassword), []byte(password)); err != nil {
 		if errors.Is(err, bcrypt.ErrMismatchedHashAndPassword) {
-			return ErrInvalidEmailOrPassword
+			return auth_errors.ErrInvalidEmailOrPassword
 		}
 
 		return err

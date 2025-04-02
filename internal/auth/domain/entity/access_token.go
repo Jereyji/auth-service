@@ -3,6 +3,7 @@ package entity
 import (
 	"time"
 
+	auth_errors "github.com/Jereyji/auth-service/internal/auth/domain/errors"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 )
@@ -50,7 +51,7 @@ func NewAccessToken(userID uuid.UUID, expiresIn time.Duration, secretKey string)
 func ValidateAccessToken(accessToken, secretKey string) (*TokenClaims, error) {
 	token, err := jwt.Parse(accessToken, func(token *jwt.Token) (any, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, ErrInvalidSigningMethod
+			return nil, auth_errors.ErrInvalidSigningMethod
 		}
 		return []byte(secretKey), nil
 	})

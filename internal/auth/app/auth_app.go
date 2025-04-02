@@ -3,7 +3,6 @@ package auth_app
 import (
 	"context"
 	"log/slog"
-	"net/http"
 	_ "net/http/pprof"
 
 	ginpprof "github.com/gin-contrib/pprof"
@@ -22,7 +21,8 @@ import (
 )
 
 const (
-	ServiceName = "Auth Service"
+	ServiceName     = "Auth Service"
+	accessTokenName = "access_token"
 )
 
 type SecretManager struct {
@@ -30,10 +30,9 @@ type SecretManager struct {
 }
 
 type AuthApp struct {
-	httpServer        *server.HTTPServer
-	accessTokenCookie *http.Cookie
-	SecretMng         *SecretManager
-	logger            *slog.Logger
+	httpServer *server.HTTPServer
+	secretMng  *SecretManager
+	logger     *slog.Logger
 }
 
 func NewAuthApp(
@@ -43,28 +42,29 @@ func NewAuthApp(
 	postgresDB *postgres.PostgresDB,
 	logger *slog.Logger,
 ) *AuthApp {
+	redisClient := redis.NewRedisClient(&cfg.Redis)
 	trm := trm.NewTransactionManager(postgresDB.Pool)
 
-	accessTokenCookie, refreshTokenCookie := initCookies(
-		int(cfg.Application.Tokens.AccessTokenExpiresIn.Seconds()),
-		int(cfg.Application.Tokens.RefreshTokenExpiresIn.Seconds()),
-	)
-
 	var (
-		repos   = repository.NewAuthRepository(trm, redis.NewRedisClient(&cfg.Redis))
-		service = auth_service.NewAuthService(repos, trm, &cfg.Application)
-		handler = handlers.NewAuthHandler(service, kafkaProducer, &accessTokenCookie, &refreshTokenCookie, logger)
+		userRepos         = repository.NewAuthRepository(trm, redisClient)
+		refreshTokenRepos = userRepos
+		service           = auth_service.NewAuthService(trm, userRepos, refreshTokenRepos, &cfg.Tokens)
+		handler           = handlers.NewAuthHandler(service, kafkaProducer, &cfg.Tokens, logger)
 	)
 
-	router := gin.Default()
+	gin.SetMode(cfg.Gin.Mode)
+	router := gin.New()
 
 	ginpprof.Register(router)
+	prometheus.MustRegister(totalRequests, statusResponse, requestDuration)
 
 	router.Use(
+		gin.Recovery(),
+		gin.LoggerWithConfig(gin.LoggerConfig{
+			SkipPaths: cfg.Gin.SkipPaths,
+		}),
 		PrometheusMiddleware(ServiceName),
 	)
-
-	prometheus.MustRegister(totalRequests, statusResponse, requestDuration)
 
 	InitRoutes(router, handler)
 	InitPrometheusRoutes(router)
@@ -72,34 +72,12 @@ func NewAuthApp(
 	srv := server.NewHTTPServer(ctx, cfg.Server.Address, router, cfg.Server.ReadTimeout, cfg.Server.WriteTimeout, logger)
 
 	return &AuthApp{
-		httpServer:        srv,
-		accessTokenCookie: &accessTokenCookie,
-		SecretMng:         &SecretManager{cfg.Application.Tokens.SecretKey},
-		logger:            logger,
+		httpServer: srv,
+		secretMng:  &SecretManager{cfg.Tokens.SecretKey},
+		logger:     logger,
 	}
 }
 
 func (a AuthApp) Run(ctx context.Context) error {
 	return a.httpServer.Run(ctx)
-}
-
-func initCookies(accessTokenExpiresIn, refreshTokenExpiresIn int) (http.Cookie, http.Cookie) {
-	accessTokenCookie := http.Cookie{
-		Name:     "access_token",
-		Path:     "/",
-		Domain:   "",
-		MaxAge:   accessTokenExpiresIn,
-		Secure:   true,
-		HttpOnly: true,
-	}
-	refreshTokenCookie := http.Cookie{
-		Name:     "refresh_token",
-		Path:     "/auth",
-		Domain:   "",
-		MaxAge:   refreshTokenExpiresIn,
-		Secure:   true,
-		HttpOnly: true,
-	}
-
-	return accessTokenCookie, refreshTokenCookie
 }

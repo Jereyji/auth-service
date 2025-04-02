@@ -1,4 +1,4 @@
-package trm
+package tr_manager
 
 import (
 	"context"

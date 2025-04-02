@@ -12,7 +12,7 @@ type PostgresDB struct {
 	Pool *pgxpool.Pool
 }
 
-func NewPostgresDB(ctx context.Context, cfg configs.PostgresConfig) (*PostgresDB, error) {
+func NewPostgresDB(ctx context.Context, cfg *configs.PostgresConfig) (*PostgresDB, error) {
 	databaseURL := fmt.Sprintf(
 		"postgres://%s:%s@%s:%s/%s?sslmode=%s",
 		cfg.User,

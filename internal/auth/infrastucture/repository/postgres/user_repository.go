@@ -5,7 +5,7 @@ import (
 	"errors"
 
 	"github.com/Jereyji/auth-service/internal/auth/domain/entity"
-	repos "github.com/Jereyji/auth-service/internal/auth/domain/interface_repository"
+	auth_errors "github.com/Jereyji/auth-service/internal/auth/domain/errors"
 	"github.com/Jereyji/auth-service/internal/auth/infrastucture/database/redis"
 	"github.com/Jereyji/auth-service/internal/auth/infrastucture/repository/postgres/queries"
 	"github.com/google/uuid"
@@ -55,7 +55,7 @@ func (r *AuthRepository) GetUser(ctx context.Context, userID uuid.UUID) (*entity
 }
 
 func (r *AuthRepository) CreateUser(ctx context.Context, user *entity.User) error {
-	db := r.txm.TxOrDB(ctx)
+	db := r.trm.TxOrDB(ctx)
 
 	_, err := db.Exec(ctx, queries.QueryCreateUser,
 		user.ID,
@@ -65,7 +65,7 @@ func (r *AuthRepository) CreateUser(ctx context.Context, user *entity.User) erro
 	)
 	if err != nil {
 		if ifUniqueViolation(err) {
-			return repos.ErrRowExist
+			return auth_errors.ErrRowExist
 		}
 
 		return err
@@ -80,7 +80,7 @@ func (r *AuthRepository) CreateUser(ctx context.Context, user *entity.User) erro
 }
 
 func (r *AuthRepository) UpdateUser(ctx context.Context, user *entity.User) error {
-	db := r.txm.TxOrDB(ctx)
+	db := r.trm.TxOrDB(ctx)
 
 	_, err := db.Exec(ctx, queries.QueryUpdateUser,
 		user.ID,
@@ -101,7 +101,7 @@ func (r *AuthRepository) UpdateUser(ctx context.Context, user *entity.User) erro
 }
 
 func (r *AuthRepository) DeleteUser(ctx context.Context, userID uuid.UUID) error {
-	db := r.txm.TxOrDB(ctx)
+	db := r.trm.TxOrDB(ctx)
 
 	_, err := db.Exec(ctx, queries.QueryDeleteUser, userID)
 	if err != nil {
@@ -117,7 +117,7 @@ func (r *AuthRepository) DeleteUser(ctx context.Context, userID uuid.UUID) error
 }
 
 func (r *AuthRepository) getUserByEmailFromDB(ctx context.Context, email string, user *entity.User) error {
-	db := r.txm.TxOrDB(ctx)
+	db := r.trm.TxOrDB(ctx)
 
 	if err := db.QueryRow(ctx, queries.QueryGetUserByEmail, email).Scan(
 		&user.ID,
@@ -126,7 +126,7 @@ func (r *AuthRepository) getUserByEmailFromDB(ctx context.Context, email string,
 		&user.HashedPassword,
 	); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return repos.ErrNotFound
+			return auth_errors.ErrNotFound
 		}
 
 		return err
@@ -136,7 +136,7 @@ func (r *AuthRepository) getUserByEmailFromDB(ctx context.Context, email string,
 }
 
 func (r *AuthRepository) getUserFromDB(ctx context.Context, userID uuid.UUID, user *entity.User) error {
-	db := r.txm.TxOrDB(ctx)
+	db := r.trm.TxOrDB(ctx)
 
 	if err := db.QueryRow(ctx, queries.QueryGetUserByID, userID).Scan(
 		&user.ID,
@@ -145,7 +145,7 @@ func (r *AuthRepository) getUserFromDB(ctx context.Context, userID uuid.UUID, us
 		&user.HashedPassword,
 	); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return repos.ErrNotFound
+			return auth_errors.ErrNotFound
 		}
 
 		return err

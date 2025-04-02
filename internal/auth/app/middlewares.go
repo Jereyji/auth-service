@@ -11,13 +11,13 @@ import (
 
 func (a AuthApp) AuthModeratorMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		accessToken, err := c.Cookie(a.accessTokenCookie.Name)
+		accessToken, err := c.Cookie(accessTokenName)
 		if err != nil {
 			c.AbortWithStatusJSON(http.StatusBadRequest, http.ErrNoCookie)
 			return
 		}
 
-		claims, err := entity.ValidateAccessToken(accessToken, a.SecretMng.SecretKey)
+		claims, err := entity.ValidateAccessToken(accessToken, a.secretMng.SecretKey)
 		if err != nil {
 			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
 				"error": err.Error(),

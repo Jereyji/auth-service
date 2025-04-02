@@ -4,17 +4,17 @@ import (
 	"errors"
 
 	"github.com/Jereyji/auth-service/internal/auth/domain/entity"
-	repos "github.com/Jereyji/auth-service/internal/auth/domain/interface_repository"
 	"github.com/Jereyji/auth-service/internal/auth/infrastucture/database/redis"
 	"github.com/Jereyji/auth-service/internal/auth/infrastucture/repository/postgres/queries"
+	auth_errors "github.com/Jereyji/auth-service/internal/auth/domain/errors"
 	"github.com/jackc/pgx/v5"
 	"golang.org/x/net/context"
 )
 
-func (r *AuthRepository) GetRefreshToken(ctx context.Context, tokenString string) (*entity.RefreshSessions, error) {
+func (r *AuthRepository) GetRefreshToken(ctx context.Context, tokenString string) (*entity.RefreshToken, error) {
 	cacheKey := formatCacheKey(rtCacheKeyText, tokenString)
 
-	var refreshToken entity.RefreshSessions
+	var refreshToken entity.RefreshToken
 	if err := r.redisClient.Get(ctx, cacheKey, &refreshToken); err == nil {
 		return &refreshToken, nil
 	} else if err != redis.Nil {
@@ -32,18 +32,18 @@ func (r *AuthRepository) GetRefreshToken(ctx context.Context, tokenString string
 	return &refreshToken, nil
 }
 
-func (r *AuthRepository) CreateRefreshToken(ctx context.Context, refreshToken *entity.RefreshSessions) error {
-	db := r.txm.TxOrDB(ctx)
+func (r *AuthRepository) CreateRefreshToken(ctx context.Context, refreshToken *entity.RefreshToken) error {
+	db := r.trm.TxOrDB(ctx)
 
 	_, err := db.Exec(ctx, queries.QueryCreateRefreshToken,
-		refreshToken.RefreshToken,
+		refreshToken.Token,
 		refreshToken.UserID,
 		refreshToken.CreatedAt,
-		refreshToken.ExpiresIn,
+		refreshToken.ExpiresAt,
 	)
 	if err != nil {
 		if ifUniqueViolation(err) {
-			return repos.ErrRowExist
+			return auth_errors.ErrRowExist
 		}
 
 		return err
@@ -57,14 +57,14 @@ func (r *AuthRepository) CreateRefreshToken(ctx context.Context, refreshToken *e
 	return nil
 }
 
-func (r *AuthRepository) UpdateRefreshToken(ctx context.Context, oldToken string, token *entity.RefreshSessions) error {
-	db := r.txm.TxOrDB(ctx)
+func (r *AuthRepository) UpdateRefreshToken(ctx context.Context, oldToken string, token *entity.RefreshToken) error {
+	db := r.trm.TxOrDB(ctx)
 
 	_, err := db.Exec(ctx, queries.QueryUpdateRefreshToken,
 		oldToken,
-		token.RefreshToken,
+		token.Token,
 		token.UserID,
-		token.ExpiresIn,
+		token.ExpiresAt,
 	)
 	if err != nil {
 		return err
@@ -79,7 +79,7 @@ func (r *AuthRepository) UpdateRefreshToken(ctx context.Context, oldToken string
 }
 
 func (r *AuthRepository) DeleteRefreshToken(ctx context.Context, token string) error {
-	db := r.txm.TxOrDB(ctx)
+	db := r.trm.TxOrDB(ctx)
 
 	_, err := db.Exec(ctx, queries.QueryDeleteRefreshToken, token)
 	if err != nil {
@@ -94,18 +94,18 @@ func (r *AuthRepository) DeleteRefreshToken(ctx context.Context, token string) e
 	return nil
 }
 
-func (r *AuthRepository) getRefreshTokenFromDB(ctx context.Context, token string, refreshToken *entity.RefreshSessions) error {
-	db := r.txm.TxOrDB(ctx)
+func (r *AuthRepository) getRefreshTokenFromDB(ctx context.Context, token string, refreshToken *entity.RefreshToken) error {
+	db := r.trm.TxOrDB(ctx)
 
 	err := db.QueryRow(ctx, queries.QueryGetRefreshToken, token).Scan(
-		&refreshToken.RefreshToken,
+		&refreshToken.Token,
 		&refreshToken.UserID,
 		&refreshToken.CreatedAt,
-		&refreshToken.ExpiresIn,
+		&refreshToken.ExpiresAt,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return repos.ErrNotFound
+			return auth_errors.ErrNotFound
 		}
 
 		return err

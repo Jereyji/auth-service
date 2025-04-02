@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"time"
 
+	auth_errors "github.com/Jereyji/auth-service/internal/auth/domain/errors"
 	"github.com/google/uuid"
 )
 
@@ -43,7 +44,7 @@ func generateRandomToken() (string, error) {
 
 func (t RefreshToken) ValidateRefreshToken() error {
 	if t.ExpiresAt.Before(time.Now()) {
-		return ErrInvalidRefreshToken
+		return auth_errors.ErrInvalidRefreshToken
 	}
 
 	return nil

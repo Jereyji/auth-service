@@ -211,7 +211,7 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes * 100",
+          "expr": "(1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100",
           "legendFormat": "__auto",
           "range": true,
           "refId": "A"
@@ -616,13 +616,13 @@
     "list": []
   },
   "time": {
-    "from": "now-6h",
+    "from": "now-15m",
     "to": "now"
   },
   "timepicker": {},
   "timezone": "",
   "title": "Auth Service Dashboard",
   "uid": "auth_service_dashboard",
-  "version": 28,
+  "version": 29,
   "weekStart": ""
 }

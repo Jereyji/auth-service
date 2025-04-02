@@ -6,8 +6,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
-
-func InitRoutes(router *gin.Engine, authHandler *handlers.AuthHandler) {
+func InitRoutes(router gin.IRouter, authHandler *handlers.AuthHandler) {
 	auth := router.Group("/auth")
 	{
 		auth.POST("/register", authHandler.Register)

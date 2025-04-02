@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/Jereyji/auth-service/internal/auth/infrastucture/database/redis"
-	trm "github.com/Jereyji/auth-service/internal/pkg/transaction_manager"
+	tr_manager "github.com/Jereyji/auth-service/internal/pkg/transaction_manager"
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5/pgconn"
 )
@@ -18,13 +18,13 @@ const (
 )
 
 type AuthRepository struct {
-	txm         trm.TransactionManager
+	trm         tr_manager.TransactionManager
 	redisClient *redis.RedisClient
 }
 
-func NewAuthRepository(txm trm.TransactionManager, redisClient *redis.RedisClient) *AuthRepository {
+func NewAuthRepository(trm tr_manager.TransactionManager, redisClient *redis.RedisClient) *AuthRepository {
 	return &AuthRepository{
-		txm:         txm,
+		trm:         trm,
 		redisClient: redisClient,
 	}
 }
