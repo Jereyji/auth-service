@@ -1,4 +1,4 @@
-package tr_manager
+package transaction_manager
 
 import (
 	"context"
@@ -33,12 +33,12 @@ type TransactionManager struct {
 	db *pgxpool.Pool
 }
 
-func NewTransactionManager(db *pgxpool.Pool) TransactionManager {
+func NewTransactionManager(db *pgxpool.Pool) *TransactionManager {
 	txManager := TransactionManager{
 		db: db,
 	}
 
-	return txManager
+	return &txManager
 }
 
 func (m TransactionManager) WithTransaction(ctx context.Context, f func(context.Context) error) error {

@@ -5,7 +5,7 @@ import (
 	"log/slog"
 	_ "net/http/pprof"
 
-	ginpprof "github.com/gin-contrib/pprof"
+	// ginpprof "github.com/gin-contrib/pprof"
 
 	auth_service "github.com/Jereyji/auth-service/internal/auth/application/services"
 	"github.com/Jereyji/auth-service/internal/auth/infrastucture/database/postgres"
@@ -25,13 +25,13 @@ const (
 	accessTokenName = "access_token"
 )
 
-type SecretManager struct {
+type secretManager struct {
 	SecretKey string
 }
 
 type AuthApp struct {
 	httpServer *server.HTTPServer
-	secretMng  *SecretManager
+	secretMng  *secretManager
 	logger     *slog.Logger
 }
 
@@ -55,8 +55,15 @@ func NewAuthApp(
 	gin.SetMode(cfg.Gin.Mode)
 	router := gin.New()
 
-	ginpprof.Register(router)
-	prometheus.MustRegister(totalRequests, statusResponse, requestDuration)
+	// if gin.Mode() != gin.ReleaseMode {
+	// 	ginpprof.Register(router)
+	// }
+
+	prometheus.MustRegister(
+		totalRequests,
+		statusResponse,
+		requestDuration,
+	)
 
 	router.Use(
 		gin.Recovery(),
@@ -70,14 +77,15 @@ func NewAuthApp(
 	InitPrometheusRoutes(router)
 
 	srv := server.NewHTTPServer(ctx, cfg.Server.Address, router, cfg.Server.ReadTimeout, cfg.Server.WriteTimeout, logger)
-
-	return &AuthApp{
+	app := AuthApp{
 		httpServer: srv,
-		secretMng:  &SecretManager{cfg.Tokens.SecretKey},
+		secretMng:  &secretManager{cfg.Tokens.SecretKey},
 		logger:     logger,
 	}
+
+	return &app
 }
 
-func (a AuthApp) Run(ctx context.Context) error {
+func (a *AuthApp) Run(ctx context.Context) error {
 	return a.httpServer.Run(ctx)
 }

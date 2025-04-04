@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"gopkg.in/gomail.v2"
 	"github.com/Jereyji/auth-service/internal/pkg/configs"
+	"gopkg.in/gomail.v2"
 )
 
 type MessageServiceI interface {
