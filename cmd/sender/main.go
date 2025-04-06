@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"os"
 	"os/signal"
@@ -20,23 +21,40 @@ func main() {
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
 	defer cancel()
 
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
-	slog.SetDefault(logger)
-
 	var config configs.SenderConfig
 	if err := configs.NewConfig(&config, configPath, envPath); err != nil {
-		logger.Error("error reading environment variables: ", slog.String("error", err.Error()))
-		os.Exit(1)
+		panic(fmt.Errorf("error reading environment variables: %w", err))
 	}
+
+	logger := SetupLogger(config.EnvMode)
 
 	senderApp, err := sender_app.NewSenderApp(ctx, &config, logger)
 	if err != nil {
-		logger.Error("error initializing sender app:", slog.String("error", err.Error()))
-		os.Exit(1)
+		panic(fmt.Errorf("error initializing sender app: %w", err))
 	}
 
 	if err := senderApp.Run(ctx); err != nil {
-		logger.Error("error while running sender app", slog.String("error", err.Error()))
-		os.Exit(1)
+		panic(fmt.Errorf("error while running sender app: %w", err))
 	}
+}
+
+func SetupLogger(envMode string) *slog.Logger {
+	var logger *slog.Logger
+
+	switch envMode {
+	case "debug":
+		logger = slog.New(
+			slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}),
+		)
+	case "release":
+		logger = slog.New(
+			slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelWarn}),
+		)
+	default:
+		logger = slog.New(
+			slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}),
+		)
+	}
+
+	return logger
 }
