@@ -3,12 +3,13 @@ package repository
 import (
 	"errors"
 
+	"context"
+
 	"github.com/Jereyji/auth-service/internal/auth/domain/entity"
 	auth_errors "github.com/Jereyji/auth-service/internal/auth/domain/errors"
 	"github.com/Jereyji/auth-service/internal/auth/infrastucture/database/redis"
 	"github.com/Jereyji/auth-service/internal/auth/infrastucture/repository/postgres/queries"
 	"github.com/jackc/pgx/v5"
-	"golang.org/x/net/context"
 )
 
 func (r *AuthRepository) GetRefreshToken(ctx context.Context, tokenString string) (*entity.RefreshToken, error) {

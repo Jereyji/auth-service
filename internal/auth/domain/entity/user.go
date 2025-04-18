@@ -16,13 +16,13 @@ type User struct {
 	HashedPassword string
 }
 
-func NewUser(name, email, password string) (*User, error) {
+func NewUser(name, email, password string) (User, error) {
 	hashedPassword, err := hashPassword(password)
 	if err != nil {
-		return nil, err
+		return User{}, err
 	}
 
-	return &User{
+	return User{
 		ID:             uuid.New(),
 		Name:           name,
 		Email:          email,

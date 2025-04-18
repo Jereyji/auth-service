@@ -16,14 +16,14 @@ type RefreshToken struct {
 	ExpiresAt time.Time
 }
 
-func NewRefreshToken(userID uuid.UUID, expiresIn time.Duration) (*RefreshToken, error) {
+func NewRefreshToken(userID uuid.UUID, expiresIn time.Duration) (RefreshToken, error) {
 	token, err := generateRandomToken()
 	if err != nil {
-		return nil, err
+		return RefreshToken{}, err
 	}
 
 	curTime := time.Now()
-	return &RefreshToken{
+	return RefreshToken{
 		Token:     token,
 		UserID:    userID,
 		CreatedAt: curTime,

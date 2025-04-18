@@ -6,33 +6,33 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
-	"time"
 
 	"github.com/Jereyji/auth-service/internal/auth/domain/entity"
 	auth_errors "github.com/Jereyji/auth-service/internal/auth/domain/errors"
 	"github.com/Jereyji/auth-service/internal/pkg/configs"
 	"github.com/Jereyji/auth-service/internal/pkg/kafka"
-	"github.com/Jereyji/auth-service/internal/pkg/kafka/models"
+
+	// kafka_models "github.com/Jereyji/auth-service/internal/pkg/kafka/models"
 	"github.com/gin-gonic/gin"
 )
 
-type AuthServiceI interface {
+type IAuthService interface {
 	Register(ctx context.Context, name string, email string, password string) error
-	DummyLogin(ctx context.Context, name string, email string, password string) (*entity.AccessToken, *entity.RefreshToken, error)
-	Login(ctx context.Context, email string, password string) (*entity.AccessToken, *entity.RefreshToken, error)
-	RefreshTokens(ctx context.Context, refreshToken string) (*entity.AccessToken, *entity.RefreshToken, error)
+	DummyLogin(ctx context.Context, name string, email string, password string) (entity.AccessToken, entity.RefreshToken, error)
+	Login(ctx context.Context, email string, password string) (entity.AccessToken, entity.RefreshToken, error)
+	RefreshTokens(ctx context.Context, refreshToken string) (entity.AccessToken, entity.RefreshToken, error)
 	Logout(ctx context.Context, refreshToken string) error
 }
 
 type AuthHandler struct {
-	service       AuthServiceI
+	service       IAuthService
 	kafkaProducer *kafka.KafkaProducer
 	cookies       *Cookies
 	logger        *slog.Logger
 }
 
 func NewAuthHandler(
-	service AuthServiceI,
+	service IAuthService,
 	kafkaProducer *kafka.KafkaProducer,
 	tokensCfg *configs.TokensConfig,
 	slog *slog.Logger,
@@ -97,18 +97,14 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		return
 	}
 
-	if err := h.sendEventToKafka(user.Email); err != nil {
-		h.logger.Error("sending event error: ", slog.String("error", err.Error()))
-		c.Status(http.StatusInternalServerError)
-		return
-	}
+	// if err := h.sendEventToKafka(user.Email, kafka_models.LoginEvent{}); err != nil {
+	// 	h.logger.Error("sending event error: ", slog.String("error", err.Error()))
+	// 	c.Status(http.StatusInternalServerError)
+	// 	return
+	// }
 
-	// h.cookies.sendTokens(c, accessToken.Token, refreshToken.RefreshToken)
-	// c.Status(http.StatusOK)
-	c.JSON(http.StatusOK, LoginResponse{
-		AccessToken:  accessToken.Token,
-		RefreshToken: refreshToken.Token,
-	})
+	h.cookies.sendTokens(c, accessToken.Token, refreshToken.Token)
+	c.Status(http.StatusOK)
 }
 
 func (h *AuthHandler) DummyLogin(c *gin.Context) {
@@ -166,14 +162,14 @@ func (h *AuthHandler) RefreshTokens(c *gin.Context) {
 	c.Status(http.StatusOK)
 }
 
-func (h *AuthHandler) sendEventToKafka(email string) error {
-	loginEvent := models.LoginEvent{
-		Email:     email,
-		Timestamp: time.Now(),
-		Success:   true,
-	}
+func (h *AuthHandler) sendEventToKafka(email string, event any) error {
+	// loginEvent := models.LoginEvent{
+	// 	Email:     email,
+	// 	Timestamp: time.Now(),
+	// 	Success:   true,
+	// }
 
-	eventJSON, err := json.Marshal(loginEvent)
+	eventJSON, err := json.Marshal(event)
 	if err != nil {
 		return err
 	}

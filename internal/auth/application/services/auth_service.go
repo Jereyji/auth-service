@@ -1,10 +1,11 @@
 package auth_service
 
 import (
+	"context"
+
 	"github.com/Jereyji/auth-service/internal/auth/domain/entity"
 	"github.com/Jereyji/auth-service/internal/pkg/configs"
 	"github.com/google/uuid"
-	"golang.org/x/net/context"
 )
 
 type ITransactionManager interface {
@@ -51,17 +52,17 @@ func (s *AuthService) Register(ctx context.Context, name, email, password string
 		return err
 	}
 
-	if err := s.userRepos.CreateUser(ctx, user); err != nil {
+	if err := s.userRepos.CreateUser(ctx, &user); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (s *AuthService) Login(ctx context.Context, email, password string) (*entity.AccessToken, *entity.RefreshToken, error) {
+func (s *AuthService) Login(ctx context.Context, email, password string) (entity.AccessToken, entity.RefreshToken, error) {
 	var (
-		accessToken  *entity.AccessToken
-		refreshToken *entity.RefreshToken
+		accessToken  entity.AccessToken
+		refreshToken entity.RefreshToken
 	)
 
 	err := s.trm.WithTransaction(ctx, func(ctx context.Context) error {
@@ -84,23 +85,23 @@ func (s *AuthService) Login(ctx context.Context, email, password string) (*entit
 			return err
 		}
 
-		if err := s.refreshTokenRepos.CreateRefreshToken(ctx, refreshToken); err != nil {
+		if err := s.refreshTokenRepos.CreateRefreshToken(ctx, &refreshToken); err != nil {
 			return err
 		}
 
 		return nil
 	})
 	if err != nil {
-		return nil, nil, err
+		return entity.AccessToken{}, entity.RefreshToken{}, err
 	}
 
 	return accessToken, refreshToken, nil
 }
 
-func (s *AuthService) DummyLogin(ctx context.Context, name, email, password string) (*entity.AccessToken, *entity.RefreshToken, error) {
+func (s *AuthService) DummyLogin(ctx context.Context, name, email, password string) (entity.AccessToken, entity.RefreshToken, error) {
 	var (
-		accessToken  *entity.AccessToken
-		refreshToken *entity.RefreshToken
+		accessToken  entity.AccessToken
+		refreshToken entity.RefreshToken
 	)
 
 	err := s.trm.WithTransaction(ctx, func(ctx context.Context) error {
@@ -109,7 +110,7 @@ func (s *AuthService) DummyLogin(ctx context.Context, name, email, password stri
 			return err
 		}
 
-		if err := s.userRepos.CreateUser(ctx, user); err != nil {
+		if err := s.userRepos.CreateUser(ctx, &user); err != nil {
 			return err
 		}
 
@@ -123,23 +124,23 @@ func (s *AuthService) DummyLogin(ctx context.Context, name, email, password stri
 			return err
 		}
 
-		if err := s.refreshTokenRepos.CreateRefreshToken(ctx, refreshToken); err != nil {
+		if err := s.refreshTokenRepos.CreateRefreshToken(ctx, &refreshToken); err != nil {
 			return err
 		}
 
 		return nil
 	})
 	if err != nil {
-		return nil, nil, err
+		return entity.AccessToken{}, entity.RefreshToken{}, err
 	}
 
 	return accessToken, refreshToken, nil
 }
 
-func (s *AuthService) RefreshTokens(ctx context.Context, refreshToken string) (*entity.AccessToken, *entity.RefreshToken, error) {
+func (s *AuthService) RefreshTokens(ctx context.Context, refreshToken string) (entity.AccessToken, entity.RefreshToken, error) {
 	var (
-		newAccessToken  *entity.AccessToken
-		newRefreshToken *entity.RefreshToken
+		newAccessToken  entity.AccessToken
+		newRefreshToken entity.RefreshToken
 	)
 
 	err := s.trm.WithTransaction(ctx, func(ctx context.Context) error {
@@ -172,14 +173,14 @@ func (s *AuthService) RefreshTokens(ctx context.Context, refreshToken string) (*
 			return err
 		}
 
-		if err := s.refreshTokenRepos.UpdateRefreshToken(ctx, refreshToken, newRefreshToken); err != nil {
+		if err := s.refreshTokenRepos.UpdateRefreshToken(ctx, refreshToken, &newRefreshToken); err != nil {
 			return err
 		}
 
 		return nil
 	})
 	if err != nil {
-		return nil, nil, err
+		return entity.AccessToken{}, entity.RefreshToken{}, err
 	}
 
 	return newAccessToken, newRefreshToken, nil

@@ -21,7 +21,7 @@ type AccessToken struct {
 	Token string
 }
 
-func NewAccessToken(userID uuid.UUID, expiresIn time.Duration, secretKey string) (*AccessToken, error) {
+func NewAccessToken(userID uuid.UUID, expiresIn time.Duration, secretKey string) (AccessToken, error) {
 	curTime := time.Now()
 	claims := TokenClaims{
 		RegisteredClaims: jwt.RegisteredClaims{
@@ -40,15 +40,15 @@ func NewAccessToken(userID uuid.UUID, expiresIn time.Duration, secretKey string)
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	accessToken, err := token.SignedString([]byte(secretKey))
 	if err != nil {
-		return nil, err
+		return AccessToken{}, err
 	}
 
-	return &AccessToken{
+	return AccessToken{
 		Token: accessToken,
 	}, nil
 }
 
-func ValidateAccessToken(accessToken, secretKey string) (*TokenClaims, error) {
+func ValidateAccessToken(accessToken, secretKey string) (TokenClaims, error) {
 	token, err := jwt.Parse(accessToken, func(token *jwt.Token) (any, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, auth_errors.ErrInvalidSigningMethod
@@ -56,35 +56,35 @@ func ValidateAccessToken(accessToken, secretKey string) (*TokenClaims, error) {
 		return []byte(secretKey), nil
 	})
 	if err != nil {
-		return nil, err
+		return TokenClaims{}, err
 	}
 
 	claims, ok := token.Claims.(jwt.MapClaims)
 	if !ok {
-		return nil, jwt.ErrTokenInvalidClaims
+		return TokenClaims{}, jwt.ErrTokenInvalidClaims
 	}
 
 	userIDStr, ok := claims["user_id"].(string)
 	if !ok {
-		return nil, jwt.ErrTokenInvalidClaims
+		return TokenClaims{}, jwt.ErrTokenInvalidClaims
 	}
 
 	userID, err := uuid.Parse(userIDStr)
 	if err != nil {
-		return nil, err
+		return TokenClaims{}, err
 	}
 
 	issuedAt, ok := claims["iat"].(float64)
 	if !ok {
-		return nil, jwt.ErrTokenInvalidClaims
+		return TokenClaims{}, jwt.ErrTokenInvalidClaims
 	}
 
 	expiresAt, ok := claims["exp"].(float64)
 	if !ok {
-		return nil, jwt.ErrTokenInvalidClaims
+		return TokenClaims{}, jwt.ErrTokenInvalidClaims
 	}
 
-	return &TokenClaims{
+	return TokenClaims{
 		RegisteredClaims: jwt.RegisteredClaims{
 			IssuedAt:  &jwt.NumericDate{Time: time.Unix(int64(issuedAt), 0)},
 			ExpiresAt: &jwt.NumericDate{Time: time.Unix(int64(expiresAt), 0)},
