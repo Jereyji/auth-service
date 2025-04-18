@@ -1,4 +1,4 @@
-PROJECT_NAME=auth-service_test
+PROJECT_NAME=auth_service_test
 SERVICE_PATH=$(CURDIR)/cmd/main.go
 DEPLOYMENTS_PATH=$(CURDIR)/deployments
 DOCKER_COMPOSE_PATH=$(DEPLOYMENTS_PATH)/docker-compose.yaml
