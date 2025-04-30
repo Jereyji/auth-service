@@ -1,0 +1,11 @@
+packages:
+  github.com/Jereyji/auth-service/internal/auth/presentation/handlers:
+    interfaces:
+      IKafkaProducer:
+        config:
+          filename: "i_kafka_producer.go"
+          dir: "mocks"
+      IAuthService:
+        config:
+          filename: "i_auth_service.go"
+          dir: "mocks"
