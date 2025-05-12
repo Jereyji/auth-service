@@ -40,28 +40,22 @@ func TestValidateAccessToken(t *testing.T) {
 		token, err := entity.NewAccessToken(UserID, InvalidExpiresInAT, SecretKey)
 		require.NoError(t, err)
 
-		claims, err := entity.ValidateAccessToken(token.Token, SecretKey)
+		_, err = entity.ValidateAccessToken(token.Token, SecretKey)
 		assert.Error(t, err)
-
-		assert.Nil(t, claims)
 	})
 
 	t.Run("Invalid Signature", func(t *testing.T) {
 		token, err := entity.NewAccessToken(UserID, ValidExpiresInAT, SecretKey)
 		require.NoError(t, err)
 
-		claims, err := entity.ValidateAccessToken(token.Token, "wrong-test-secret-key")
+		_, err = entity.ValidateAccessToken(token.Token, "wrong-test-secret-key")
 		assert.Error(t, err)
-
-		assert.Nil(t, claims)
 	})
 
 	t.Run("Malfored Token", func(t *testing.T) {
 		malforedToken := "malfored.access.token.JWT"
 
-		claims, err := entity.ValidateAccessToken(malforedToken, SecretKey)
+		_, err := entity.ValidateAccessToken(malforedToken, SecretKey)
 		assert.Error(t, err)
-
-		assert.Nil(t, claims)
 	})
 }

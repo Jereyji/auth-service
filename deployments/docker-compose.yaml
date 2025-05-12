@@ -108,6 +108,10 @@ services:
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_JMX_PORT: 9997
+      KAFKA_JMX_HOSTNAME: kafka
     networks:
       - service-network
     healthcheck:
@@ -130,8 +134,23 @@ services:
       bash -c "
         echo -e 'Waiting for Kafka to be ready...' &&
         cub kafka-ready -b kafka:29092 1 30 &&
-        kafka-topics --create --if-not-exists --bootstrap-server kafka:29092 --partitions 1 --replication-factor 1 --topic login-events
+        kafka-topics --create --if-not-exists --bootstrap-server kafka:29092 --partitions 5 --replication-factor 1 --topic login-events
       "
+
+  kafka-ui:
+    container_name: kafka-ui
+    image: provectuslabs/kafka-ui:latest
+    ports:
+      - 8082:8080
+    depends_on:
+      kafka:
+        condition: service_healthy
+    volumes:
+      - ./../config/dynamic_config.yaml:/etc/kafkaui/dynamic_config.yaml
+    environment:
+      DYNAMIC_CONFIG_ENABLED: true
+    networks:
+      - service-network
 
   prometheus:
     container_name: prometheus

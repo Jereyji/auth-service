@@ -23,6 +23,10 @@ down-service:
 run-service:
 	go run $(SERVICE_PATH)
 
+.PHONY: run-unit-tests
+run-unit-tests:
+	go test internal/auth/domain/entity/*_test.go
+
 .PHONY: run-functional-tests
 run-functional-tests:
-	go test tests/functional_test.go
+	go test tests/auth/functional_test.go

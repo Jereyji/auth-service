@@ -1,7 +1,7 @@
 package configs
 
 type SenderConfig struct {
-	EnvMode string `yaml:"kafka"`
+	EnvMode string `yaml:"env"`
 
 	Kafka KafkaConfig `yaml:"kafka"`
 
